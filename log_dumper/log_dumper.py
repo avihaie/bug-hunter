@@ -2,9 +2,6 @@ import logging
 import argparse
 import datetime
 import os
-import socket
-import helpers
-import config
 from rrmngmnt.host import Host
 from rrmngmnt.user import RootUser
 
@@ -12,6 +9,8 @@ from rrmngmnt.user import RootUser
 LOCALHOST_LOGS_PATH = os.path.expanduser("~/tmp")
 SLAVE_HOST = Host("127.0.0.1")
 SLAVE_HOST.users.append(RootUser("AVIEf274^&$"))
+
+import helpers
 
 # set up logging to file
 logging.basicConfig(
@@ -27,7 +26,6 @@ class LogDumper:
     """
     LogDumper class, dumps selected logs on remote hosts and copy them to a
     directory on the localhost.
-    Each host can choose what files to dump.
     """
 
     def __init__(
@@ -93,7 +91,6 @@ class LogDumper:
             host_executors.append(
                 helpers.get_host_executor(host_ip, password, username)
             )
-
             logger.info("Dumping logs %s on host ip %s", self.logs, host_ip)
             cut_logs_path = self.dump_host_logs(
                 host_executors[-1], self.logs, self.tail_lines
@@ -103,6 +100,7 @@ class LogDumper:
             remote_host = Host(host_ip)
             remote_host.users.append(RootUser(password))
             self.collect_logs(remote_host=remote_host, remote_logs_path=cut_logs_path[0])
+
 
 
 def main():
@@ -163,6 +161,7 @@ def main():
     options = parser.parse_args()
 
     if len(options.files_to_dump) > 0 and len(options.machines):
+        options = parser.parse_args()
         machines = options.machines
         hosts_ips = [machine[0] for machine in machines]
         usernames = [machine[1] for machine in machines]
@@ -176,8 +175,9 @@ def main():
     obj.dump_hosts_logs()
     logger.info(
         "Done !!!\n logs %s copied from hosts_ips %s to localhost",
-        obj.hosts_ips, obj.logs
+        obj.logs, obj.hosts_ips
     )
+
 
 if __name__ == '__main__':
     main()

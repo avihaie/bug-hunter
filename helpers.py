@@ -1,7 +1,6 @@
 import config
 from rrmngmnt.host import Host
 from rrmngmnt.user import User
-from rrmngmnt.filesystem import FileSystem
 
 
 def get_host_resource(ip, password, username=None):
