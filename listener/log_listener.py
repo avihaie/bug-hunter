@@ -74,7 +74,8 @@ class LogListener:
             rc, out, err = self.executor.run_cmd(
                 cmd=shlex.split(command_to_exec), io_timeout=90
             )
-            assert rc, (
+            # Changed as rc == 0 means command was successfully
+            assert rc == 0, (
                 "Failed to execute command %s with err %s and output %s" % (
                     command_to_exec, err, out
                 )
