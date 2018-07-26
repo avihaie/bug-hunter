@@ -1,11 +1,10 @@
-import smtplib
-import logging, os, datetime, socket
+import logging, os, datetime, socket, sys, tarfile, gzip
+from traceback import print_stack
 import argparse
-# from log_dumper.log_dumper import LogDumper
 from rrmngmnt.host import Host
-from rrmngmnt.user import RootUser
 
 LOCALHOST_LOGS_PATH = os.path.expanduser("~/tmp")
+EXTRACTED_FOLDER_NAME = 'extracted'
 # this monstrous thing extracts localhost ip
 LOCAL_HOST = Host( [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
                     if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0],
@@ -21,36 +20,61 @@ logger = logging.getLogger(__name__)
 class ScenarioFinder:
     """
     """
-    def __init__(self,  hosts_ips, passwords, usernames=None, logs=None, tail_lines=1000, localhost_pass=None):
-        self.hosts_ips = hosts_ips
-        self.passwords = passwords
-        self.usernames = usernames
-        self.logs = logs
-        self.tail_lines = tail_lines
-        self.localhost_pass = localhost_pass
+    def __init__(self, time_start, path_logs):
+        self.time_start = time_start[:-3]  # cutting seconds. '2018-07-16 03:39:04 --> '2018-07-16 03:39'
+        self.path_logs = path_logs
 
 
-    def collect_logs(self):
-        """
-        Collect logs from remote host back to one directory in localhost
-        """
-        # Create directory names after current timestamp
-        if not os.path.exists(LOCALHOST_LOGS_PATH):
-            os.mkdir(LOCALHOST_LOGS_PATH)
-        dir_name = datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")
-        full_path = LOCALHOST_LOGS_PATH + "/" + dir_name
-        os.mkdir(full_path)
-        logger.info("Logs will be collected to the following directory %s", full_path)
-        LOCAL_HOST.users.append(RootUser(self.localhost_pass))
+    def parse_logs(self):
+        logger.info('Starting to parse files in ' + self.path_logs)
+        if not os.path.isdir(self.path_logs):
+            logger.error("path_logs is not a valid directory on local machine: " + self.path_logs)
+            sys.exit()
 
-        # Copy log to the localhost directory
-        for host_ip, password, username, log in zip(self.hosts_ips, self.passwords, self.usernames, self.logs):
-            remote_host = Host(host_ip)
-            remote_host.users.append(RootUser(password=password))
-            assert remote_host.fs.transfer(
-                path_src=log,
-                target_host=LOCAL_HOST,
-                path_dst=full_path)
+        all_files = os.listdir(self.path_logs)
+        engine_log_files = [x for x in all_files if 'engine' in x]
+        engine_log_files.sort(reverse=True)  # now engine logs are sorted in DESC order. older is first. engine.log is last
+
+        for file_to_parse in engine_log_files:
+            full_file_name = os.path.join(self.path_logs, file_to_parse)
+            logger.info("Parsing " + file_to_parse)
+            if file_to_parse.endswith('.gz'):
+                full_file_name = self.extract_gz_file(full_file_name)
+                # continue to next file if extraction of gz failed in 'extract' for some reason
+                if full_file_name is None:
+                    continue
+
+            try:
+                with open(full_file_name) as f:
+                    for line in f:
+                        if self.time_start in line:
+                            logger.info("Found start time: %s in: %s" % (self.time_start, os.path.basename(full_file_name)))
+            except IOError:
+                logger.error("File does not appear to exist" + full_file_name)
+
+
+
+    def extract_gz_file(self, full_file_name):
+        logger.info("Attempting to extract " + full_file_name)
+        full_folder_path_for_extracted_file = os.path.join(self.path_logs, EXTRACTED_FOLDER_NAME)  # e.g /some/dir/extracted
+        if not os.path.exists(full_folder_path_for_extracted_file):
+            logger.info("Extraction folder does not exist. attempting to create it. %s" % full_folder_path_for_extracted_file)
+            os.makedirs(full_folder_path_for_extracted_file)
+        gz_file_name = os.path.basename(full_file_name)  # e.g engine.log-20180718.gz
+        full_file_path_for_extracted_file = os.path.join(full_folder_path_for_extracted_file,
+                                                         gz_file_name.strip('.gz'))  # e.g /x/y/extracted/engine.log-20180718
+
+        logger.info("Attempting to extract file %s to: %s" % (gz_file_name, full_file_path_for_extracted_file))
+        try:
+            os.system('gunzip -c %s > %s' %(full_file_name, full_file_path_for_extracted_file))
+        except:
+            logger.error("Failed to extract file %s to path %s \n will continue to next file"
+                         % (full_file_name, full_file_path_for_extracted_file))
+            print_stack()
+            return None
+
+        return full_file_path_for_extracted_file
+
 
 
 def main():
@@ -75,38 +99,25 @@ def main():
         * -t, --test_name : name of the test (e.g. -e 'TestCase18145')
 
     """
-    usage = "usage: %prog [options] arg1 arg2"
     parser = argparse.ArgumentParser(description='This functionality parses engine events')
-    parser.add_argument("-m", "--machines", action="append", dest="machines",
-                        nargs=3,
-                        help="remote machine to download logs from  '-m' "
-                             "followed by ip,username & password",
-                        default=[])
+    parser.add_argument("-t", "--time_start", action="store", dest="time_start",
+                        help="Start time of the listener. Used for parsing the events starting from that time."
+                             "The valuse has to be string in format: "
+                             "datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')"
+                             "For example: '2018-07-19 10:25:17'", required=True)
 
-    parser.add_argument("-f", "--files", action="append", dest="files_to_download",
-                        help="option that followed by the absolute path of the file that need to be downloaded,"
-                             " each file should be preceded by -f separately",
-                        default=[])
-
-    parser.add_argument("-p", "--localhostpass", action="store", type=str, dest="localhost_pass",
-                        help="password of the localhost")
+    parser.add_argument("-p", "--path_logs", action="store", dest="path_logs",
+                        help="Full LOCAL folder path of logs that need to be parsed.", required=True)
 
     args = parser.parse_args()
-    if len(args.files_to_download) > 0 and len(args.machines):
-        machines = args.machines
-        hosts_ips = [machine[0] for machine in machines]
-        usernames = [machine[1] for machine in machines]
-        passwords = [machine[2] for machine in machines]
-        log_files = args.files_to_download
-        localhost_pass = args.localhost_pass
-    else:
-        raise RuntimeError("Missing arguments! usage : %s", usage)
+    # check start_time format
+    try:
+        datetime.datetime.strptime(args.time_start, '%Y-%m-%d %H:%M:%S')
+    except:
+        parser.error("Argument -t must be in the following format: '%Y-%m-%d %H:%M:%S'")
 
-    logger.info("start dumping logs...")
-
-    scenario_finder = ScenarioFinder(hosts_ips=hosts_ips, passwords=passwords, logs=log_files, usernames=usernames,
-                                     localhost_pass=localhost_pass)
-    scenario_finder.collect_logs()
+    scenario_finder = ScenarioFinder(time_start=args.time_start, path_logs=args.path_logs)
+    scenario_finder.parse_logs()
 
 if __name__ == '__main__':
     # Run as a script directly from terminal
