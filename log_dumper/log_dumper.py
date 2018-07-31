@@ -55,9 +55,10 @@ class LogDumper:
             cut_logs_path.append(os.path.abspath(cut_log))
         return cut_logs_path
 
-    def collect_logs(self, remote_host, remote_logs_path):
+    @staticmethod
+    def create_localhost_logs_dir():
         """
-        Collect logs from remote host back to one directory in localhost
+        Collect logs from remote hosts back to one directory in localhost
         """
         # Create directory names after current timestamp
         if not os.path.exists(LOCALHOST_LOGS_PATH):
@@ -65,46 +66,58 @@ class LogDumper:
         dir_name = datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")
         full_path = LOCALHOST_LOGS_PATH + "/" + dir_name
         os.mkdir(full_path)
+        return full_path
+
+    def collect_logs(self, remote_host, remote_logs_path, full_path):
+        """
+        Collect logs from remote hosts back to one directory in localhost
+        """
         logger.info(
             "Logs will be collected to the following directory %s", full_path
         )
         LOCAL_HOST.users.append(RootUser(self.localhost_pass))
         # Copy log to the localhost directory
-        for log in remote_logs_path:
+        for idx, log in enumerate(remote_logs_path):
             assert remote_host.fs.transfer(
                 path_src=log,
                 target_host=LOCAL_HOST,
                 path_dst=full_path
             )
 
-    def dump_hosts_logs(self):
-        remote_hosts_logs_dict = {}
-        host_executors = []
-        # Get host executors per host
-        for host_ip, password, username, in zip(
-            self.hosts_ips, self.passwords, self.usernames
-        ):
-            remote_hosts_logs_dict[host_ip] = {
-                'password': password,
-                'username': username,
-                'logs': self.logs,
-                'tail_lines': self.tail_lines,
-            }
-            logger.info("Host logs dict looks like %s", remote_hosts_logs_dict)
-            host_executors.append(
-                helpers.get_host_executor(host_ip, password, username)
-            )
-            logger.info("Dumping logs %s on host ip %s", self.logs, host_ip)
-            cut_logs_path = self.dump_host_logs(
-                host_executors[-1], self.logs, self.tail_lines
-            )
-            # Copy dumped logs back to localhost
-            logger.info("Collect logs %s back to localhost", self.logs)
-            remote_host = Host(host_ip)
-            remote_host.users.append(RootUser(password))
-            self.collect_logs(
-                remote_host=remote_host, remote_logs_path=cut_logs_path[0],
-            )
+
+def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost_pass):
+
+    remote_hosts_logs_dict = {}
+    host_executors = []
+    logd_obj = LogDumper(
+        hosts_ips=hosts_ips, passwords=passwords, usernames=usernames,
+        logs=logs, tail_lines=tail_lines, localhost_pass=localhost_pass
+    )
+    full_path = logd_obj.create_localhost_logs_dir()
+    # Get host executors per host
+    for host_ip, password, username, logs in zip(
+        logd_obj.hosts_ips, logd_obj.passwords, logd_obj.usernames, logd_obj.logs
+    ):
+        remote_hosts_logs_dict[host_ip] = {
+            'password': password,
+            'username': username,
+            'logs': logs,
+            'tail_lines': logd_obj.tail_lines,
+        }
+        logger.info("Host logs dict looks like %s", remote_hosts_logs_dict)
+        host_executors.append(
+            helpers.get_host_executor(host_ip, password, username)
+        )
+        logger.info("Dumping logs %s on host ip %s", remote_hosts_logs_dict[host_ip]['logs'], host_ip)
+        cut_logs_path = logd_obj.dump_host_logs(
+            host_executors[-1], remote_hosts_logs_dict[host_ip]['logs'], remote_hosts_logs_dict[host_ip]['tail_lines']
+        )
+        cut_logs_path.extend(remote_hosts_logs_dict[host_ip]['logs'])
+        # Copy dumped logs back to localhost
+        logger.info("Collect logs %s back to localhost", cut_logs_path)
+        remote_host = Host(host_ip)
+        remote_host.users.append(RootUser(password))
+        logd_obj.collect_logs(remote_host=remote_host, remote_logs_path=cut_logs_path, full_path=full_path)
 
 
 def main():
@@ -136,7 +149,7 @@ def main():
               (e.g. -p "password")
 
         Example for manual usage:
-        python log_dumper/log_dumper.py -m 10.0.0.1 root password -f /var/log/vdsm/vdsm.log -l 1000 -p "1234"
+        python log_dumper/log_dumper.py -m 10.0.0.1 root password /var/log/vdsm/vdsm.log /var/log/vdsm/vdsm2.log -m 10.0.0.2 root password /var/log/vdsm/vdsm3.log-l 1000 -p "1234"
 
         """
     logging.basicConfig(level=logging.INFO,
@@ -149,15 +162,9 @@ def main():
 
     parser.add_argument("-m", "--machines", action="append", dest="machines",
                         help="remote machine to dump logs on '-m' "
-                             "followed by ip,username & password",
-                        metavar="machine-ip username password", nargs=3)
-
-    parser.add_argument("-f", "--files", action="append",
-                        dest="files_to_dump",
-                        help="option that followed by "
-                             "the absolute path of the "
-                             "file that need dumping, each file should "
-                             "be preceded by -f separately")
+                             "followed by ip,username , password, logs_to_dump,"
+                             " If you want several machines add an addtional -m option",
+                        metavar="machine-ip username password logs",  nargs='+')
 
     parser.add_argument("-l", "--linesnumber", action="store", type=int,
                         dest="line_numbers",
@@ -170,28 +177,27 @@ def main():
                              "the localhost password",
                         )
     options = parser.parse_args()
-    if options.files_to_dump and options.machines:
+    if options.machines:
         machines = options.machines
         hosts_ips = [machine[0] for machine in machines]
         usernames = [machine[1] for machine in machines]
         passwords = [machine[2] for machine in machines]
-        logs = options.files_to_dump
+        logs = [machine[3:] for machine in machines]
         tail_lines = options.line_numbers
         localhost_pass = options.localhost_pass
     else:
         raise RuntimeError("Missing arguments! usage : %s", parser.parse_args(['-h']))
 
     logger.info("start dumping logs...")
-    obj = LogDumper(
-        hosts_ips=hosts_ips, passwords=passwords, usernames=usernames,
-        logs=logs, tail_lines=tail_lines, localhost_pass=localhost_pass
+    dump_hosts_logs(
+        hosts_ips=hosts_ips, passwords=passwords, usernames=usernames, logs=logs,
+        tail_lines=tail_lines, localhost_pass=localhost_pass
     )
     logger.info(
-        "Done !!!\n%s last lines of log %s copied from hosts_ips %s to "
-        "localhost",
-        obj.tail_lines, obj.logs, obj.hosts_ips
+        "Done !!!\n%s last lines and full version logs %s copied from hosts_ips %s to localhost",
+        tail_lines, logs, hosts_ips
     )
-    obj.dump_hosts_logs()
+
 
 if __name__ == '__main__':
     main()
