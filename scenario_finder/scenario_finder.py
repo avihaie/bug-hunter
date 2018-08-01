@@ -27,6 +27,10 @@ class ScenarioFinder:
 
     def parse_logs(self):
         logger.info('Starting to parse files in ' + self.path_logs)
+        events_lst = []
+        TIME_START_FOUND = False  # boolean. false by default. meaning that the program is in mode of searching for 1st
+        # time_start occurrence. when it becomes true, we switch to mode of searching for events and gathering them.
+
         if not os.path.isdir(self.path_logs):
             logger.error("path_logs is not a valid directory on local machine: " + self.path_logs)
             sys.exit()
@@ -40,6 +44,7 @@ class ScenarioFinder:
             logger.info("Parsing " + file_to_parse)
             if file_to_parse.endswith('.gz'):
                 full_file_name = self.extract_gz_file(full_file_name)
+
                 # continue to next file if extraction of gz failed in 'extract' for some reason
                 if full_file_name is None:
                     continue
@@ -47,15 +52,25 @@ class ScenarioFinder:
             try:
                 with open(full_file_name) as f:
                     for line in f:
-                        if self.time_start in line:
+                        if self.time_start in line and not TIME_START_FOUND:
                             logger.info("Found start time: %s in: %s" % (self.time_start, os.path.basename(full_file_name)))
+                            TIME_START_FOUND = True
+
+                        if TIME_START_FOUND:
+                            if 'EVENT_ID:' in line:
+                                logger.debug('Found string "EVENT_ID" line. appending it to "events_lst". '
+                                             'File: %s The line: %s' % (full_file_name, line))
+                                events_lst.append(line)
+
             except IOError:
                 logger.error("File does not appear to exist" + full_file_name)
+
+        logger.info('Finished parsing logs')
 
 
 
     def extract_gz_file(self, full_file_name):
-        logger.info("Attempting to extract " + full_file_name)
+        # logger.info("Attempting to extract " + full_file_name)
         full_folder_path_for_extracted_file = os.path.join(self.path_logs, EXTRACTED_FOLDER_NAME)  # e.g /some/dir/extracted
         if not os.path.exists(full_folder_path_for_extracted_file):
             logger.info("Extraction folder does not exist. attempting to create it. %s" % full_folder_path_for_extracted_file)
