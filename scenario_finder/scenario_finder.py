@@ -20,28 +20,26 @@ logger = logging.getLogger(__name__)
 class ScenarioFinder:
     """
     """
-    def __init__(self, time_start, path_logs):
+    def __init__(self, time_start, path_logs, event_string, scenario_result_file_path):
         self.time_start = time_start[:-3]  # cutting seconds. '2018-07-16 03:39:04 --> '2018-07-16 03:39'
         self.path_logs = path_logs
-
+        self.event_string_to_find = event_string
+        self.events_found_lst = []  # stores the lines of logs where  event_string_to_find was found
+        self.time_start_found = False  # it becomes true when 'time_start' string is found inside parsed logs
+        self.scenario_result_file_path = scenario_result_file_path
 
     def parse_logs(self):
         logger.info('Starting to parse files in ' + self.path_logs)
-        events_lst = []
-        TIME_START_FOUND = False  # boolean. false by default. meaning that the program is in mode of searching for 1st
-        # time_start occurrence. when it becomes true, we switch to mode of searching for events and gathering them.
 
-        if not os.path.isdir(self.path_logs):
-            logger.error("path_logs is not a valid directory on local machine: " + self.path_logs)
-            sys.exit()
+        self.check_dir_exists(self.path_logs)
 
-        all_files = os.listdir(self.path_logs)
-        engine_log_files = [x for x in all_files if 'engine' in x]
-        engine_log_files.sort(reverse=True)  # now engine logs are sorted in DESC order. older is first. engine.log is last
+        all_log_files_lst = os.listdir(self.path_logs)
+        engine_log_files_lst = [x for x in all_log_files_lst if 'engine' in x]
+        engine_log_files_lst.sort(reverse=True)  # now engine logs are sorted in DESC order. older is first. engine.log is last
 
-        for file_to_parse in engine_log_files:
+        for file_to_parse in engine_log_files_lst:
             full_file_name = os.path.join(self.path_logs, file_to_parse)
-            logger.info("Parsing " + file_to_parse)
+            logger.info("About to parse: " + file_to_parse)
             if file_to_parse.endswith('.gz'):
                 full_file_name = self.extract_gz_file(full_file_name)
 
@@ -52,29 +50,54 @@ class ScenarioFinder:
             try:
                 with open(full_file_name) as f:
                     for line in f:
-                        if self.time_start in line and not TIME_START_FOUND:
-                            logger.info("Found start time: %s in: %s" % (self.time_start, os.path.basename(full_file_name)))
-                            TIME_START_FOUND = True
+                        if not self.time_start_found:
+                            self.time_start_found = self.find_time_start_string_in_line(line, full_file_name)
 
-                        if TIME_START_FOUND:
-                            if 'EVENT_ID:' in line:
-                                logger.debug('Found string "EVENT_ID" line. appending it to "events_lst". '
-                                             'File: %s The line: %s' % (full_file_name, line))
-                                events_lst.append(line)
+                        if self.time_start_found:
+                            self.find_event_string_in_line(full_file_name, line)
 
             except IOError:
                 logger.error("File does not appear to exist" + full_file_name)
 
-        logger.info('Finished parsing logs')
+        logger.info('Finished parsing logs, about to dump the scenario to: ' + self.scenario_result_file_path)
+        self.dumb_scenario_list_to_file()
 
+    def dumb_scenario_list_to_file(self):
+        try:
+            with open(self.scenario_result_file_path, 'w') as f:
+                f.writelines(self.events_found_lst)
+                logger.info("Wrote scenario events to file: " + self.scenario_result_file_path)
+        except IOError as e:
+            logger.error("Failed to dump scenarios list to file: %s \n %s" % (self.scenario_result_file_path, e))
 
+    def find_event_string_in_line(self, full_file_name, line):
+        if self.event_string_to_find in line:
+            logger.debug('Found string: %s inside line. appending it to events_found_lst. File: %s The line: %s'
+                         % (self.event_string_to_find, full_file_name, line))
+            self.events_found_lst.append(line)
+
+    def find_time_start_string_in_line(self, line, full_file_name):
+        if self.time_start in line:
+            logger.info("Found start time string: %s in file: %s Beginning to search for event string: %s"
+                        % (self.time_start, os.path.basename(full_file_name), self.event_string_to_find))
+            return True
+        return False
+
+    def check_dir_exists(self, dir_path):
+        #  checking existence of logs directory which we will parse
+        if not os.path.isdir(dir_path):
+            logger.error("Not a valid directory on local machine: " + dir_path)
+            sys.exit()
 
     def extract_gz_file(self, full_file_name):
         # logger.info("Attempting to extract " + full_file_name)
+        # TODO: EXTRACTED_FOLDER_NAME
         full_folder_path_for_extracted_file = os.path.join(self.path_logs, EXTRACTED_FOLDER_NAME)  # e.g /some/dir/extracted
+
         if not os.path.exists(full_folder_path_for_extracted_file):
-            logger.info("Extraction folder does not exist. attempting to create it. %s" % full_folder_path_for_extracted_file)
+            logger.info("Extraction folder for gz files does not exist. attempting to create it. %s" % full_folder_path_for_extracted_file)
             os.makedirs(full_folder_path_for_extracted_file)
+
         gz_file_name = os.path.basename(full_file_name)  # e.g engine.log-20180718.gz
         full_file_path_for_extracted_file = os.path.join(full_folder_path_for_extracted_file,
                                                          gz_file_name.strip('.gz'))  # e.g /x/y/extracted/engine.log-20180718
@@ -114,6 +137,8 @@ def main():
         * -t, --test_name : name of the test (e.g. -e 'TestCase18145')
 
     """
+    datetime_now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+
     parser = argparse.ArgumentParser(description='This functionality parses engine events')
     parser.add_argument("-t", "--time_start", action="store", dest="time_start",
                         help="Start time of the listener. Used for parsing the events starting from that time."
@@ -124,6 +149,16 @@ def main():
     parser.add_argument("-p", "--path_logs", action="store", dest="path_logs",
                         help="Full LOCAL folder path of logs that need to be parsed.", required=True)
 
+    parser.add_argument("-e", "--events_to_grap", action="store", dest="event_string",
+                        help="This is the string we are looking for, inside the logs", required=True)
+
+    parser.add_argument("-s", "--scenario_result_file_path", action="store", help="Full path for a result file where we"
+                        " wish to save the scenario event. This is optional arg. if not specified, the path will be as default.",
+                        dest="scenario_result_file_path", nargs="?", const="/tmp/scenario_file_%s.txt" % datetime_now,
+                        default="/tmp/scenario_file_%s.txt" % datetime_now)
+    # const sets the default when there are 0 arguments. If you want to set -s to some value even if no -s is specified,
+    # then include default=..  nargs=? means 0-or-1 arguments
+
     args = parser.parse_args()
     # check start_time format
     try:
@@ -131,7 +166,8 @@ def main():
     except:
         parser.error("Argument -t must be in the following format: '%Y-%m-%d %H:%M:%S'")
 
-    scenario_finder = ScenarioFinder(time_start=args.time_start, path_logs=args.path_logs)
+    scenario_finder = ScenarioFinder(time_start=args.time_start, path_logs=args.path_logs,
+                                     event_string=args.event_string, scenario_result_file_path=args.scenario_result_file_path)
     scenario_finder.parse_logs()
 
 if __name__ == '__main__':
