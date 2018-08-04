@@ -77,10 +77,11 @@ class Notifier:
             self.test_name, self.event.capitalize(), self.host_name, self.event_details, self.target_mail
         ))
 
-    def main(self):
-        # Run from code - not directly from terminal
-        self.notify_console()
-        self.send_mail()
+
+def notify_via_mail_and_console(event, event_details, target_mail, mail_user, mail_pass, host_name, test_name):
+    notifier = Notifier(event, event_details, target_mail, mail_user, mail_pass, host_name, test_name)
+    notifier.notify_console()
+    notifier.send_mail()
 
 
 def main():
@@ -128,10 +129,11 @@ def main():
 
     options = parser.parse_args()
 
-    notify_ob = Notifier(options.event, options.event_details, options.mail_user,  options.mail_user,
-                         options.mail_password, options.host_name, options.test_name)
-    notify_ob.notify_console()
-    notify_ob.send_mail()
+    notify_via_mail_and_console(
+        options.event, options.event_details, options.mail_user,  options.mail_user, options.mail_password,
+        options.host_name, options.test_name
+    )
+
 
 if __name__ == '__main__':
     # Run as a script directly from terminal

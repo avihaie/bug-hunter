@@ -1,6 +1,5 @@
 import logging
 import argparse
-import datetime
 import os
 
 from rrmngmnt.host import Host
@@ -55,19 +54,6 @@ class LogDumper:
             cut_logs_path.append(os.path.abspath(cut_log))
         return cut_logs_path
 
-    @staticmethod
-    def create_localhost_logs_dir():
-        """
-        Collect logs from remote hosts back to one directory in localhost
-        """
-        # Create directory names after current timestamp
-        if not os.path.exists(LOCALHOST_LOGS_PATH):
-            os.mkdir(LOCALHOST_LOGS_PATH)
-        dir_name = datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")
-        full_path = LOCALHOST_LOGS_PATH + "/" + dir_name
-        os.mkdir(full_path)
-        return full_path
-
     def collect_logs(self, remote_host, remote_logs_path, full_path):
         """
         Collect logs from remote hosts back to one directory in localhost
@@ -93,7 +79,7 @@ def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost
         hosts_ips=hosts_ips, passwords=passwords, usernames=usernames,
         logs=logs, tail_lines=tail_lines, localhost_pass=localhost_pass
     )
-    full_path = logd_obj.create_localhost_logs_dir()
+    full_path = helpers.create_localhost_logs_dir(LOCALHOST_LOGS_PATH)
     # Get host executors per host
     for host_ip, password, username, logs in zip(
         logd_obj.hosts_ips, logd_obj.passwords, logd_obj.usernames, logd_obj.logs
@@ -134,13 +120,9 @@ def main():
               logs dump should exec on
 
         Options -
-            * -m, --machine :followed by ip,username & password of the remote
-              machines (e.g. -m 10.0.0.0 root P@SSW0RD)
+            * -m, --machine :followed by ip,username, password, log/s to dump on  the remote
+              machines (e.g. -m 10.0.0.0 root P@SSW0RD  /var/log/log1  -m 10.0.0.1 root P@SSW0RD  /var/log/log2))
               each machine should be preceded by -m separately
-            * -f,--files : option that followed by the absolute path of the
-              files that need to watch for.
-              each file should be preceded by -f separately
-              (e.g. -f /var/log/vdsm/vdsm.log -f /tmp/my_log)
             * -l,--linesnumber:  option that is followed by the integer value
               of the lines taken from the end of the selected log file
               (e.g. -f /log/vdsm/vdsm.log -l 1000)
