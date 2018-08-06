@@ -32,7 +32,10 @@ class ScenarioFinder:
 
         all_log_files_lst = os.listdir(self.path_logs)
         engine_log_files_lst = [x for x in all_log_files_lst if 'engine' in x]
-        engine_log_files_lst.sort(reverse=True)  # now engine logs are sorted in DESC order. older is first. engine.log is last
+        engine_log_files_lst.sort(reverse=False)  # now engine logs are sorted in DESC order. engine.log is first, then
+                                                  # the oldest file, and last index will be the most recent.
+        engine_log_files_lst.insert(len(engine_log_files_lst), engine_log_files_lst.pop(0))  # moving [0] element (engine.log)
+                                                                                             # TO last place index
 
         for file_to_parse in engine_log_files_lst:
             full_file_name = os.path.join(self.path_logs, file_to_parse)
