@@ -7,7 +7,6 @@ from rrmngmnt.user import RootUser
 import helpers
 
 
-LOCALHOST_LOGS_PATH = os.path.expanduser("~/tmp")
 LOCAL_HOST = Host("127.0.0.1")
 
 # set up logging to file
@@ -71,7 +70,7 @@ class LogDumper:
             )
 
 
-def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost_pass):
+def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost_pass, full_path):
 
     remote_hosts_logs_dict = {}
     host_executors = []
@@ -79,7 +78,6 @@ def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost
         hosts_ips=hosts_ips, passwords=passwords, usernames=usernames,
         logs=logs, tail_lines=tail_lines, localhost_pass=localhost_pass
     )
-    full_path = helpers.create_localhost_logs_dir(LOCALHOST_LOGS_PATH)
     # Get host executors per host
     for host_ip, password, username, logs in zip(
         logd_obj.hosts_ips, logd_obj.passwords, logd_obj.usernames, logd_obj.logs

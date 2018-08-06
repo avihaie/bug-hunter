@@ -1,6 +1,8 @@
 import logging
 import time
 
+import config
+import helpers
 from log_listener import watch_logs
 from log_dumper import dump_hosts_logs
 from notifier import notify_via_mail_and_console
@@ -118,6 +120,8 @@ class Manager:
         self.__test_start_time = test_start_time_val
 
     def _rhv_manager(self):
+        full_path = helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
+        logger.info("Local host logs directory set to %s",full_path)
 
         logger.info("Starting log listener searching for regex %s in logs %s", self.regex, self.logs)
         found_regex, issue_found = watch_logs(
@@ -126,8 +130,8 @@ class Manager:
             ip_for_files=self.remote_hosts,
             username=self.remote_users,
             password=self.remote_passwords,
-            time_out=2400,
-            )[0]
+            time_out=-1,
+            )
 
         # TODO: implemet multithreading for 3 threads log_dumper(run serially event_finder,mapper) , notifier , check_env_state
         # TODO: Once all threads are all done run bugzilla reporter
@@ -135,7 +139,7 @@ class Manager:
 
         test_logs_path = dump_hosts_logs(
             hosts_ips=self.remote_hosts, passwords=self.remote_passwords, usernames=self.remote_users, logs=self.logs,
-            tail_lines=self.tail_lines, localhost_pass=self.localhost_pass
+            tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path= full_path
         )
         logger.info("Logs dumped to localhost %s", test_logs_path)
         logger.info("Notify of the issue via mail and consule")

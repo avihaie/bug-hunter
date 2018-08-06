@@ -114,7 +114,9 @@ class LogListener:
             logger.info("Can't run command %s, exception is %s", "tail -f", ex)
 
         recv = ""
-        while self.time_out > time.time() - start_time:
+
+        timeout_condition = True if self.time_out == -1 else self.time_out > time.time() - start_time
+        while timeout_condition:
             try:
                 # receive the output from the channel
                 recv = "".join([recv, self.channel.recv(1024)])
@@ -284,7 +286,7 @@ def main():
           command should exec on
         - remote_username: username for the second machine
         - remote_password: password for the second machine
-        - time_out: limited time for watching
+        - time_out: limited time for watching , if '-1' is inserted watching time is infinite
 
     Options -
         * -m, --machine : if the file is on remote machine then '-m' followed
