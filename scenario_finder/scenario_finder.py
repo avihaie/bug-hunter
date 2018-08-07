@@ -129,9 +129,9 @@ class ScenarioFinder:
         logger.info("Attempting to extract file %s to: %s" % (gz_file_name, full_file_path_for_extracted_file))
         try:
             os.system('gunzip -c %s > %s' %(full_file_name, full_file_path_for_extracted_file))
-        except:
-            logger.error("Failed to extract file %s to path %s \n will continue to next file"
-                         % (full_file_name, full_file_path_for_extracted_file))
+        except Exception as e:
+            logger.error("Failed to extract file %s to path %s\n will continue to next file\n %s"
+                         % (full_file_name, full_file_path_for_extracted_file, e))
             print_stack()
             return None
 
