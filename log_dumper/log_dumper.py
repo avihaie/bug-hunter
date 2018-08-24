@@ -1,11 +1,11 @@
 import logging
 import argparse
+
 import os
 
 from rrmngmnt.host import Host
 from rrmngmnt.user import RootUser
 import helpers
-
 
 LOCAL_HOST = Host("127.0.0.1")
 
@@ -62,6 +62,7 @@ class LogDumper:
         )
         LOCAL_HOST.users.append(RootUser(self.localhost_pass))
         # Copy log to the localhost directory
+
         for idx, log in enumerate(remote_logs_path):
             assert remote_host.fs.transfer(
                 path_src=log,
@@ -156,6 +157,7 @@ def main():
                         help="password of the localhost on '-p' followed by "
                              "the localhost password",
                         )
+
     options = parser.parse_args()
     if options.machines:
         machines = options.machines
