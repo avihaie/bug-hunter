@@ -74,8 +74,7 @@ class LogListener:
             rc, out, err = self.executor.run_cmd(
                 cmd=shlex.split(command_to_exec), io_timeout=90
             )
-            # Changed as rc == 0 means command was successfully
-            assert rc == 0, (
+            assert rc, (
                 "Failed to execute command %s with err %s and output %s" % (
                     command_to_exec, err, out
                 )
@@ -115,15 +114,21 @@ class LogListener:
             logger.info("Can't run command %s, exception is %s", "tail -f", ex)
 
         recv = ""
-        while self.time_out > time.time() - start_time:
+
+        timeout_condition = True if self.time_out == -1 else self.time_out > time.time() - start_time
+        while timeout_condition:
             try:
                 # receive the output from the channel
                 recv = "".join([recv, self.channel.recv(1024)])
-                reg = re.search(regex, recv)
+                # reg = re.search(regex, recv)
+                reg = re.search(("^.*?" + regex + ".*$"), recv, re.MULTILINE)
 
                 if reg:
                     logger.info("regex %s found..", regex)
-                    return reg
+                    full_reg_line = reg.group(0)
+                    logger.info("Full match %s found..", full_reg_line)
+
+                    return reg, full_reg_line
 
             except KeyboardInterrupt:
                 self.channel.close()
@@ -281,7 +286,7 @@ def main():
           command should exec on
         - remote_username: username for the second machine
         - remote_password: password for the second machine
-        - time_out: limited time for watching
+        - time_out: limited time for watching , if '-1' is inserted watching time is infinite
 
     Options -
         * -m, --machine : if the file is on remote machine then '-m' followed

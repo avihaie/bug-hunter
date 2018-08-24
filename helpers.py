@@ -1,3 +1,6 @@
+import datetime
+import os
+
 import config
 from rrmngmnt.host import Host
 from rrmngmnt.user import User
@@ -6,7 +9,6 @@ from rrmngmnt.user import User
 def get_host_resource(ip, password, username=None):
     """
     Return remote resource with given username/password on given ip
-
     :param ip: host ip
     :type: ip: str
     :param username: host username, if None using root user
@@ -24,7 +26,6 @@ def get_host_resource(ip, password, username=None):
 
 def get_host_executor(ip, password, username=None, use_pkey=False):
     """
-
     :param ip: Host ip
     :type: ip: str
     :param password: User's password
@@ -41,3 +42,16 @@ def get_host_executor(ip, password, username=None, use_pkey=False):
     return get_host_resource(
         ip, password, username
     ).executor(user, pkey=use_pkey)
+
+
+def create_localhost_logs_dir(local_host_logs_path):
+    """
+    Collect logs from remote hosts back to one directory in localhost
+    """
+    # Create directory names after current timestamp
+    if not os.path.exists(local_host_logs_path):
+        os.mkdir(local_host_logs_path)
+    dir_name = datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")
+    full_path = local_host_logs_path + "/" + dir_name
+    os.mkdir(full_path)
+    return full_path
