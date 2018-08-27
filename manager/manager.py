@@ -1,5 +1,6 @@
 import logging
 import time
+import datetime
 
 import config
 import helpers
@@ -30,10 +31,10 @@ class Manager:
     """
 
     def __init__(
-        self, regex, logs, remote_hosts, remote_users, remote_passwords, timeout=None, localhost_pass=None,
-        tail_lines=None, target_mail=None, mail_user=None, mail_password=None, test_name=None
+        self, fault_regex, logs, remote_hosts, remote_users, remote_passwords, timeout=None, localhost_pass=None,
+        tail_lines=None, target_mail=None, mail_user=None, mail_password=None, test_name=None , event_regex=None
     ):
-        self.regex = regex
+        self.fault_regex = fault_regex
         self.logs = logs
         self.remote_hosts = remote_hosts
         self.remote_users = remote_users
@@ -41,19 +42,20 @@ class Manager:
         self.timeout = timeout
         self.localhost_pass = localhost_pass
         self.tail_lines = tail_lines
-        self.test_start_time = time.time()
+        self.test_start_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         self.target_mail = target_mail
         self.mail_user = mail_user
         self.mail_password = mail_password
         self.test_name = test_name
+        self.event_regex = event_regex
 
     @property
-    def regex(self):
-        return self.__regex
+    def self.fault_regex(self):
+        return self.__fault_regex
 
-    @regex.setter
-    def regex(self, regex_val):
-        self.__regex = regex_val
+    @fault_regex.setter
+    def fault_regex(self, fault_regex_val):
+        self.__fault_regex = fault_regex_val
 
     @property
     def logs(self):
@@ -118,15 +120,26 @@ class Manager:
     @test_start_time.setter
     def test_start_time(self, test_start_time_val):
         self.__test_start_time = test_start_time_val
+        
+    @property
+    def event_regex(self):
+        return self.__event_regex
+
+    @event_regex.setter
+    def event_regex(self, event_regex_val):
+        self.__event_regex = event_regex_val
 
     def _rhv_manager(self):
+        test_start_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        logger.info("Starting test monitoring at %s", test_start_time)
+
         full_path = helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
         logger.info("Local host logs directory set to %s",full_path)
 
         logger.info("Starting log listener searching for regex %s in logs %s", self.regex, self.logs)
         found_regex, issue_found = watch_logs(
             files_to_watch=self.logs()[1],
-            regex=self.regex,
+            regex=self.fault_regex,
             ip_for_files=self.remote_hosts,
             username=self.remote_users,
             password=self.remote_passwords,
@@ -143,5 +156,10 @@ class Manager:
         )
         logger.info("Logs dumped to localhost %s", test_logs_path)
         logger.info("Notify of the issue via mail and consule")
-        notify_via_mail_and_console(self.regex, found_regex)
+        notify_via_mail_and_console(self.fault_regex, found_regex)
+        logger.info("Parsing scenario from the log file")
+        scenario_finder = ScenarioFinder(
+            time_start=self.test_start_time, path_logs=full_path, event_string="EVENT_ID", 
+            scenario_result_file_path=full_path)
+        scenario_finder.parse_logs()
 
