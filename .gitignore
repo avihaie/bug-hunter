@@ -100,4 +100,4 @@ ENV/
 # mypy
 .mypy_cache/
 
-/env_state/resources_stats.txt
+/env_state/*.txt
