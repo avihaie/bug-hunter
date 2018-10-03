@@ -1,1 +1,3 @@
-Shows the enviroment state when test start vs when test fails
+Shows the enviroment state at a given time.
+
+Usually we will check the enviroment state when test start and also when test fails .
