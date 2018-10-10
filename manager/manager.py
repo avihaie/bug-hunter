@@ -4,9 +4,10 @@ import datetime
 
 import config
 import helpers
-from log_listener import watch_logs
-from log_dumper import dump_hosts_logs
-from notifier import notify_via_mail_and_console
+from listener.log_listener import watch_logs
+from log_dumper.log_dumper import dump_hosts_logs
+from notifier.notifier import notify_via_mail_and_console
+from scenario_finder.scenario_finder import ScenarioFinder
 
 # set up logging to file
 logging.basicConfig(
@@ -53,7 +54,7 @@ class Manager:
         self.event_regex = event_regex
 
     @property
-    def self.fault_regex(self):
+    def fault_regex(self):
         return self.__fault_regex
 
     @fault_regex.setter
@@ -137,7 +138,7 @@ class Manager:
         logger.info("Starting test monitoring at %s", test_start_time)
 
         full_path = helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
-        logger.info("Local host logs directory set to %s",full_path)
+        logger.info("Local host logs directory set to the following path: %s", full_path)
 
         logger.info("Starting log listener searching for regex %s in logs %s", self.regex, self.logs)
         found_regex, issue_found = watch_logs(
@@ -161,8 +162,8 @@ class Manager:
         logger.info("Notify of the issue via mail and consule")
         notify_via_mail_and_console(self.fault_regex, found_regex)
         logger.info("Parsing scenario from the log file")
-        scenario_finder = ScenarioFinder(
+        scenario_finder_obj = ScenarioFinder(
             time_start=self.test_start_time, path_logs=full_path, event_string="EVENT_ID", 
             scenario_result_file_path=full_path)
-        scenario_finder.parse_logs()
+        scenario_finder_obj.parse_logs()
 
