@@ -86,7 +86,7 @@ def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost
         remote_hosts_logs_dict[host_ip] = {
             'password': password,
             'username': username,
-            'logs': logs,
+            'logs': [logs],
             'tail_lines': logd_obj.tail_lines,
         }
         logger.info("Host logs dict looks like %s", remote_hosts_logs_dict)
@@ -130,7 +130,7 @@ def main():
               (e.g. -p "password")
 
         Example for manual usage:
-        python log_dumper/log_dumper.py -m 10.0.0.1 root password /var/log/vdsm/vdsm.log /var/log/vdsm/vdsm2.log -m 10.0.0.2 root password /var/log/vdsm/vdsm3.log-l 1000 -p "1234"
+        python log_dumper/log_dumper.py -m 10.0.0.1 root password /var/log/vdsm/vdsm.log /var/log/vdsm/vdsm2.log -m 10.0.0.2 root password /var/log/vdsm/vdsm3.log -l 1000 -p "1234"
 
         """
     logging.basicConfig(level=logging.INFO,

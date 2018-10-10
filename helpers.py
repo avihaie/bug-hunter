@@ -1,5 +1,6 @@
 import datetime
 import os
+import getpass
 
 import config
 from rrmngmnt.host import Host
@@ -53,5 +54,22 @@ def create_localhost_logs_dir(local_host_logs_path):
         os.mkdir(local_host_logs_path)
     dir_name = datetime.datetime.now().strftime("%d%m%y_%H:%M:%S")
     full_path = local_host_logs_path + "/" + dir_name
-    os.mkdir(full_path)
+    localhost_user = localhost_group = getpass.getuser()
+    print "localhost_user and group is %s" % localhost_user
+    try:
+        config.SLAVE_HOST.fs.mkdir(full_path)
+        config.SLAVE_HOST.fs.chmod(full_path, config.FULL_PERMISSIONS)
+        config.SLAVE_HOST.fs.chown(full_path, localhost_user, localhost_group)
+
+    except Exception as e:
+        print "Issue %s occured while creating/chmod dir %s" % (e, full_path)
     return full_path
+
+
+def chmod_files_directories(dir_path):
+    """
+    Change permissions recursively of all files and directories in a selected directory
+    """
+    for root, dirs, files in os.walk(dir_path):
+        for f in files:
+            config.SLAVE_HOST.fs.chmod(os.path.join(root, f), config.FULL_PERMISSIONS)

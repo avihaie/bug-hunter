@@ -4,9 +4,10 @@ import datetime
 
 import config
 import helpers
-from log_listener import watch_logs
-from log_dumper import dump_hosts_logs
-from notifier import notify_via_mail_and_console
+from listener.log_listener import watch_logs
+from log_dumper.log_dumper import dump_hosts_logs
+from notifier.notifier import notify_via_mail_and_console
+from scenario_finder.scenario_finder import ScenarioFinder
 
 # set up logging to file
 logging.basicConfig(
@@ -50,10 +51,9 @@ class Manager:
         self.mail_user = mail_user
         self.mail_password = mail_password
         self.test_name = test_name
-        self.event_regex = event_regex
 
     @property
-    def self.fault_regex(self):
+    def fault_regex(self):
         return self.__fault_regex
 
     @fault_regex.setter
@@ -123,29 +123,22 @@ class Manager:
     @test_start_time.setter
     def test_start_time(self, test_start_time_val):
         self.__test_start_time = test_start_time_val
-        
-    @property
-    def event_regex(self):
-        return self.__event_regex
 
-    @event_regex.setter
-    def event_regex(self, event_regex_val):
-        self.__event_regex = event_regex_val
 
     def _rhv_manager(self):
         test_start_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         logger.info("Starting test monitoring at %s", test_start_time)
 
         full_path = helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
-        logger.info("Local host logs directory set to %s",full_path)
+        logger.info("Local host logs directory set to the following path: %s", full_path)
 
-        logger.info("Starting log listener searching for regex %s in logs %s", self.regex, self.logs)
+        logger.info("Starting log listener searching for regex %s in logs %s", self.fault_regex, self.logs)
         found_regex, issue_found = watch_logs(
-            files_to_watch=self.logs()[1],
+            files_to_watch=self.logs[0],
             regex=self.fault_regex,
-            ip_for_files=self.remote_hosts,
-            username=self.remote_users,
-            password=self.remote_passwords,
+            ip_for_files=self.remote_hosts[0],
+            username=self.remote_users[0],
+            password=self.remote_passwords[0],
             time_out=-1,
             )
 
@@ -153,16 +146,31 @@ class Manager:
         # TODO: Once all threads are all done run bugzilla reporter
         logger.info("Issue found: %s\n Starting to dump logs to localhost ", issue_found)
 
-        test_logs_path = dump_hosts_logs(
+        dump_hosts_logs(
             hosts_ips=self.remote_hosts, passwords=self.remote_passwords, usernames=self.remote_users, logs=self.logs,
             tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path= full_path
         )
-        logger.info("Logs dumped to localhost %s", test_logs_path)
+        logger.info("Logs dumped to localhost path: %s", full_path)
         logger.info("Notify of the issue via mail and consule")
-        notify_via_mail_and_console(self.fault_regex, found_regex)
+        notify_via_mail_and_console(
+            event=self.fault_regex, event_details=found_regex, target_mail=self.target_mail, mail_user=self.mail_user,
+            mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name
+        )
         logger.info("Parsing scenario from the log file")
-        scenario_finder = ScenarioFinder(
-            time_start=self.test_start_time, path_logs=full_path, event_string="EVENT_ID", 
-            scenario_result_file_path=full_path)
-        scenario_finder.parse_logs()
+        helpers.chmod_files_directories(full_path)
+        scenario_finder_obj = ScenarioFinder(
+            time_start=self.test_start_time, path_logs=full_path, event_string="EVENT_ID",
+            scenario_result_file_path=full_path + "/" + "events")
+        scenario_finder_obj.parse_logs()
+
+
+def run_rhv_manager():
+    manager_obj = Manager(
+        fault_regex="Exception", logs=["/var/log/ovirt-engine/engine.log"], remote_hosts=["10.35.161.118"],
+        remote_users=["root"], remote_passwords=["remote_pass"],timeout="-1", localhost_pass="LOCAL_HOST_PASS",
+        tail_lines=1000, target_mail="test@gmail.com", mail_user="test@gmail.com", mail_password="mail_pass",
+        test_name='TestCase18145')
+    manager_obj._rhv_manager()
+
+run_rhv_manager()
 
