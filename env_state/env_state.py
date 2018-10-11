@@ -4,6 +4,7 @@ import logging
 import urllib3
 import datetime
 import requests
+import config
 from tabulate import tabulate
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -71,8 +72,8 @@ def main():
         * -e, --engine_uri : Uri for engine. without https.
         * -p, --password : Admin API password.
         * -s, --env_state_result_file_path : Full path to a file in which we want to store the environment state.
-                                             By default It would be: /tmp/env_state_file_<date_time_now>.txt Where date
-                                             time format is '%Y-%m-%d_%H:%M:%S'.
+                                             By default It would be: config.LOCALHOST_LOGS_PATH/env_state_file_<date_time_now>.txt
+                                             Where date time format is '%Y-%m-%d_%H:%M:%S'.
     """
     datetime_now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
@@ -85,8 +86,8 @@ def main():
 
     parser.add_argument('-s', '--env_state_result_file_path', action='store', dest='env_state_result_file_path',
                         help='Full path for saving results file', nargs="?",
-                        const="/tmp/env_state_file_%s.txt" % datetime_now,
-                        default="/tmp/env_state_file_%s.txt" % datetime_now)
+                        const="%s/env_state_file_%s.txt" % (config.LOCALHOST_LOGS_PATH, datetime_now),
+                        default="%s/env_state_file_%s.txt" % (config.LOCALHOST_LOGS_PATH, datetime_now))
     # const sets the default when there are 0 arguments. If you want to set -s to some value even if no -s is specified,
     # then include default=..  nargs=? means 0-or-1 arguments
 
