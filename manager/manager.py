@@ -151,7 +151,7 @@ class Manager:
             tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path= full_path
         )
         logger.info("Logs dumped to localhost path: %s", full_path)
-        logger.info("Notify of the issue via mail and consule")
+        logger.info("Notify of the issue via mail and console")
         notify_via_mail_and_console(
             event=self.fault_regex, event_details=found_regex, target_mail=self.target_mail, mail_user=self.mail_user,
             mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name
@@ -166,11 +166,12 @@ class Manager:
 
 def run_rhv_manager():
     manager_obj = Manager(
-        fault_regex="Exception", logs=["/var/log/ovirt-engine/engine.log"], remote_hosts=["10.35.161.118"],
-        remote_users=["root"], remote_passwords=["remote_pass"],timeout="-1", localhost_pass="LOCAL_HOST_PASS",
-        tail_lines=1000, target_mail="test@gmail.com", mail_user="test@gmail.com", mail_password="mail_pass",
-        test_name='TestCase18145')
+        fault_regex="Expression to catch", logs=["/log/full/path"], remote_hosts=["10.10.10.10"],
+        remote_users=["root"], remote_passwords=["remote_pass"], timeout="-1", localhost_pass="local_password",
+        tail_lines=1000, target_mail="target_mail@example.com", mail_user="source_mail@example.com",
+        mail_password="local_pass", test_name='TestCaseExample')
     manager_obj._rhv_manager()
 
 run_rhv_manager()
+
 

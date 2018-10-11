@@ -6,6 +6,9 @@ import argparse
 class Notifier:
     """
     Notifier class, can notify both by sending an email or/and console of an event of the user choice
+
+    Take in consideration that for mail to work in gmail you have to change the the "Allow less secure apps:" to ON at
+    https://myaccount.google.com/lesssecureapps
     """
 
     def logger_setup(self, logger_name):
@@ -96,6 +99,7 @@ def main():
         - event_details: details of the event
         - mail_user = mail_source: email source address that will appear on the sent mail triggered after the event
         - mail_password: email password of the source address
+        - target_mail: email target address
 
     Options -
         * -e, --event : summery of the event (e.g. -e "Exception caught" )
@@ -104,6 +108,7 @@ def main():
         * -p, --mail_password : email password (e.g. -p "123456")
         * -o, --host_name : host name the issue occurred on (e.g. -p "storage-ge4-test.scl.lab.tlv.redhat.com")
         * -t, --test_name : name of the test (e.g. -e 'TestCase18145')
+        * -x, --target_mail : email target address (e.g. -u "target@gmail.com")
 
     """
     parser = argparse.ArgumentParser(description='this function can be used '
@@ -127,10 +132,13 @@ def main():
     parser.add_argument("-t", "--test_name", action="store", dest="test_name",
                         help="name of the test (e.g. -e 'TestCase18145')")
 
+    parser.add_argument("-x", "--target_mail", action="store", dest="target_mail",
+                        help="email target address (e.g. -u 'target@gmail.com')")
+
     options = parser.parse_args()
 
     notify_via_mail_and_console(
-        options.event, options.event_details, options.mail_user,  options.mail_user, options.mail_password,
+        options.event, options.event_details, options.target_mail, options.mail_user, options.mail_password,
         options.host_name, options.test_name
     )
 
