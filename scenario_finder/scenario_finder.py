@@ -1,12 +1,16 @@
 import logging, os, datetime, sys, argparse
 from traceback import print_stack
+from datetime import datetime, timedelta
+import config
 
 EXTRACTED_FOLDER_NAME = 'extracted_gz'
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+MINUTES_INTERVAL = 5
 
 logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - ''%(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    datefmt=DATETIME_FORMAT)
 logger = logging.getLogger(__name__)
 
 
@@ -14,8 +18,9 @@ class ScenarioFinder:
     """
     Class for searching and storing the needed events from engine logs. can handle gz files as well as plain text files.
     """
+
     def __init__(self, time_start, path_logs, event_string, scenario_result_file_path):
-        self.time_start = time_start[:-3]  # cutting seconds. '2018-07-16 03:39:04 --> '2018-07-16 03:39'
+        self.time_start = time_start
         self.path_logs = path_logs
         self.event_string_to_find = event_string
         self.events_found_lst = []  # stores the lines of logs where  event_string_to_find was found
@@ -94,11 +99,22 @@ class ScenarioFinder:
         Used only for logging here.
         :return:  true if found, false if not found.
         """
-        if self.time_start in line:
-            logger.info("Found start time string: %s in file: %s Beginning to search for event string: %s"
-                        % (self.time_start, os.path.basename(full_file_name), self.event_string_to_find))
-            return True
-        return False
+        datetime_object_start_time = datetime.strptime(self.time_start, DATETIME_FORMAT)
+        try:
+            datetime_str_in_line = line.split(',')[0]
+            datetime_object_in_line = datetime.strptime(datetime_str_in_line, DATETIME_FORMAT)
+
+            # True if timestamp in line is between start time and start time + min
+            # example: '2018-07-25 03:11:35' <= '2018-07-25 03:15:35' <= '2018-07-25 03:16:35'
+            if datetime_object_start_time <= datetime_object_in_line <= \
+                    datetime_object_start_time + timedelta(minutes=MINUTES_INTERVAL):
+                logger.info("Found start time string: %s in file: %s Beginning to search for event string: %s"
+                            % (self.time_start, os.path.basename(full_file_name), self.event_string_to_find))
+                return True
+            return False
+
+        except:
+            return False
 
     def check_log_dir_exists(self, dir_path):
         """
@@ -118,19 +134,22 @@ class ScenarioFinder:
         :param full_file_name: Full path to a GZ file.
         :return: Full path to the extracted file inside 'extracted' folder.
         """
-        full_folder_path_for_extracted_file = os.path.join(self.path_logs, EXTRACTED_FOLDER_NAME)  # e.g /some/dir/extracted
+        full_folder_path_for_extracted_file = os.path.join(self.path_logs,
+                                                           EXTRACTED_FOLDER_NAME)  # e.g /some/dir/extracted
 
         if not os.path.exists(full_folder_path_for_extracted_file):
-            logger.info("Extraction folder for gz files does not exist. attempting to create it. %s" % full_folder_path_for_extracted_file)
+            logger.info(
+                "Extraction folder for gz files does not exist. attempting to create it. %s"
+                % full_folder_path_for_extracted_file)
             os.makedirs(full_folder_path_for_extracted_file)
 
         gz_file_name = os.path.basename(full_file_name)  # e.g engine.log-20180718.gz
-        full_file_path_for_extracted_file = os.path.join(full_folder_path_for_extracted_file,
-                                                         gz_file_name.strip('.gz'))  # e.g /x/y/extracted/engine.log-20180718
+        full_file_path_for_extracted_file = os.path.join(
+            full_folder_path_for_extracted_file, gz_file_name.strip('.gz'))  # e.g /x/y/extracted/engine.log-20180718
 
         logger.info("Attempting to extract file %s to: %s" % (gz_file_name, full_file_path_for_extracted_file))
         try:
-            os.system('gunzip -c %s > %s' %(full_file_name, full_file_path_for_extracted_file))
+            os.system('gunzip -c %s > %s' % (full_file_name, full_file_path_for_extracted_file))
         except Exception as e:
             logger.error("Failed to extract file %s to path %s\n will continue to next file\n %s"
                          % (full_file_name, full_file_path_for_extracted_file, e))
@@ -153,11 +172,11 @@ def main():
         * -e, --events_to_grab : String for which we need to search inside log files. When found, the line is stored
                                 and written to output file. In Engine log this would be 'EVENT_ID'
         * -s, --scenario_result_file_path : Full path to a file in which we want to store the events list. By default
-                                            It would be: /tmp/scenario_file_<date_time_now>.txt Where date time format
-                                            is '%Y-%m-%d_%H:%M:%S'.
+                                            It would be: config.LOCALHOST_LOGS_PATH/scenario_file_<date_time_now>.txt
+                                            Where date time format is '%Y-%m-%d %H:%M:%S'.
 
     """
-    datetime_now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    datetime_now = datetime.datetime.now().strftime(DATETIME_FORMAT)
 
     parser = argparse.ArgumentParser(description='This functionality parses engine events')
     parser.add_argument("-t", "--time_start", action="store", dest="time_start",
@@ -173,22 +192,26 @@ def main():
                         help="This is the string we are looking for, inside the logs", required=True)
 
     parser.add_argument("-s", "--scenario_result_file_path", action="store", help="Full path for a result file where we"
-                        " wish to save the scenario event. This is optional arg. if not specified, the path will be as default.",
-                        dest="scenario_result_file_path", nargs="?", const="/tmp/scenario_file_%s.txt" % datetime_now,
-                        default="/tmp/scenario_file_%s.txt" % datetime_now)
+                        " wish to save the scenario event. This is optional arg. if not specified,"
+                                                                                  " the path will be as default.",
+                        dest="scenario_result_file_path", nargs="?",
+                        const="%s/scenario_file_%s.txt" % (config.LOCALHOST_LOGS_PATH, datetime_now),
+                        default="%s/scenario_file_%s.txt" % (config.LOCALHOST_LOGS_PATH, datetime_now))
     # const sets the default when there are 0 arguments. If you want to set -s to some value even if no -s is specified,
     # then include default=..  nargs=? means 0-or-1 arguments
 
     args = parser.parse_args()
     # check start_time format
     try:
-        datetime.datetime.strptime(args.time_start, '%Y-%m-%d %H:%M:%S')
+        datetime.datetime.strptime(args.time_start, DATETIME_FORMAT)
     except:
-        parser.error("Argument -t must be in the following format: '%Y-%m-%d %H:%M:%S'")
+        parser.error("Argument -t must be in the following format: " + DATETIME_FORMAT)
 
     scenario_finder = ScenarioFinder(time_start=args.time_start, path_logs=args.path_logs,
-                                     event_string=args.event_string, scenario_result_file_path=args.scenario_result_file_path)
+                                     event_string=args.event_string,
+                                     scenario_result_file_path=args.scenario_result_file_path)
     scenario_finder.parse_logs()
+
 
 if __name__ == '__main__':
     # Run as a script directly from terminal
