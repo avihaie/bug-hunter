@@ -128,7 +128,7 @@ class LogListener:
                     full_reg_line = reg.group(0)
                     logger.info("Full match %s found..", full_reg_line)
 
-                    return reg, full_reg_line
+                    return full_reg_line
 
             except KeyboardInterrupt:
                 self.channel.close()

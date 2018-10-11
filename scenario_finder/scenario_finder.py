@@ -27,6 +27,8 @@ class ScenarioFinder:
         Main method where all of parsing logic's begins. It calls other methods for different tasks.
         """
         logger.info('Starting to parse files in ' + self.path_logs)
+        logger.info('******* Event sting is: %s', self.event_string_to_find)
+        logger.info('******* Time as input is :%s', self.time_start)
 
         self.check_log_dir_exists(self.path_logs)
 
