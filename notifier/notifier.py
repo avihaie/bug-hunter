@@ -36,7 +36,7 @@ class Notifier:
         return logger
 
     def __init__(
-        self, event, event_details, target_mail, mail_user, mail_pass, host_name, test_name
+        self, event, event_details, target_mail, mail_user, mail_pass, host_name, test_name, log_path
     ):
         self.logger = self.logger_setup("notifier.log")
         self.event = event
@@ -46,10 +46,13 @@ class Notifier:
         self.mail_pass = mail_pass
         self.host_name = host_name
         self.test_name = test_name
+        self.log_path = log_path
+
         self.logger.info(
             "Initiating notifier object with params: event: %s\ntarget mail: %s\nmail username: %s\nmail password: %s\n"
-            "host name: %s\ntest name: %s" % (
-                self.event, self.target_mail, self.mail_user, self.mail_pass, self.host_name, self.test_name
+            "host name: %s\ntest name: %s\nlog path: %s" % (
+                self.event, self.target_mail, self.mail_user, self.mail_pass, self.host_name, self.test_name,
+                self.log_path
             )
         )
 
@@ -63,8 +66,8 @@ class Notifier:
             mail.ehlo()
             mail.starttls()
             mail.login(self.mail_user, self.mail_pass)
-            content = "Subject: Test %s %s on host %s\n\n%s" % (
-                self.test_name, self.event, self.host_name, self.event_details
+            content = "Subject: Test %s %s on host %s\n\n%s\n logs are save at localhost path:\n%s" % (
+                self.test_name, self.event, self.host_name, self.event_details, self.log_path
             )
             mail.sendmail(self.mail_user, self.target_mail, content)
             mail.close()
@@ -81,8 +84,8 @@ class Notifier:
         ))
 
 
-def notify_via_mail_and_console(event, event_details, target_mail, mail_user, mail_pass, host_name, test_name):
-    notifier = Notifier(event, event_details, target_mail, mail_user, mail_pass, host_name, test_name)
+def notify_via_mail_and_console(event, event_details, target_mail, mail_user, mail_pass, host_name, test_name, log_path):
+    notifier = Notifier(event, event_details, target_mail, mail_user, mail_pass, host_name, test_name, log_path)
     notifier.notify_console()
     notifier.send_mail()
 
@@ -109,6 +112,7 @@ def main():
         * -o, --host_name : host name the issue occurred on (e.g. -p "storage-ge4-test.scl.lab.tlv.redhat.com")
         * -t, --test_name : name of the test (e.g. -e 'TestCase18145')
         * -x, --target_mail : email target address (e.g. -u "target@gmail.com")
+        * -l, --log_path : the path of the logs directory (e.g /tmp/bug_hunter_logs)
 
     """
     parser = argparse.ArgumentParser(description='this function can be used '
@@ -135,11 +139,14 @@ def main():
     parser.add_argument("-x", "--target_mail", action="store", dest="target_mail",
                         help="email target address (e.g. -u 'target@gmail.com')")
 
+    parser.add_argument("-l", "--log_path", action="store", dest="log_path",
+                        help="the path of the log directory (e.g -l '/tmp/bug_hunter_logs')")
+
     options = parser.parse_args()
 
     notify_via_mail_and_console(
         options.event, options.event_details, options.target_mail, options.mail_user, options.mail_password,
-        options.host_name, options.test_name
+        options.host_name, options.test_name, options.log_path
     )
 
 

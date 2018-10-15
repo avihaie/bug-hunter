@@ -8,6 +8,8 @@ from listener.log_listener import watch_logs
 from log_dumper.log_dumper import dump_hosts_logs
 from notifier.notifier import notify_via_mail_and_console
 from scenario_finder.scenario_finder import ScenarioFinder
+from env_state.env_state import get_resources_stats
+
 
 # set up logging to file
 logging.basicConfig(
@@ -36,7 +38,8 @@ class Manager:
 
     def __init__(
         self, fault_regex, logs, remote_hosts, remote_users, remote_passwords, timeout=None, localhost_pass=None,
-        tail_lines=None, target_mail=None, mail_user=None, mail_password=None, test_name=None , event_regex=None
+        tail_lines=None, target_mail=None, mail_user=None, mail_password=None, test_name=None , env_state_uri=None,
+        env_state_pass=None
     ):
         self.fault_regex = fault_regex
         self.logs = logs
@@ -51,6 +54,8 @@ class Manager:
         self.mail_user = mail_user
         self.mail_password = mail_password
         self.test_name = test_name
+        self.env_state_uri = env_state_uri
+        self.env_state_pass = env_state_pass
 
     @property
     def fault_regex(self):
@@ -130,7 +135,11 @@ class Manager:
         logger.info("Starting test monitoring at %s", test_start_time)
 
         full_path = helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
-        logger.info("Local host logs directory set to the following path: %s", full_path)
+        logger.info("Local host logs directory set to the following path: %s", full_path + "/" + "env_state_start")
+
+        logger.info("Check the enviroment state at the start of the test")
+        get_resources_stats(engine_uri=self.env_state_uri, engine_pass=self.env_state_pass,
+                            results_path=full_path + "/" + "env_state_start")
 
         logger.info("Starting log listener searching for regex %s in logs %s", self.fault_regex, self.logs)
         found_regex, issue_found = watch_logs(
@@ -154,7 +163,7 @@ class Manager:
         logger.info("Notify of the issue via mail and console")
         notify_via_mail_and_console(
             event=self.fault_regex, event_details=found_regex, target_mail=self.target_mail, mail_user=self.mail_user,
-            mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name
+            mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name, log_path=full_path
         )
         logger.info("Parsing scenario from the log file")
         helpers.chmod_files_directories(full_path)
@@ -163,13 +172,22 @@ class Manager:
             scenario_result_file_path=full_path + "/" + "events")
         scenario_finder_obj.parse_logs()
 
+        logger.info("Check the environment state when the issue occurred ")
+        get_resources_stats(
+            engine_uri=self.env_state_uri, engine_pass=self.env_state_pass,
+            results_path=full_path + "/" + "env_state_at_issue"
+        )
+
+
 
 def run_rhv_manager():
     manager_obj = Manager(
         fault_regex="Expression to catch", logs=["/log/full/path"], remote_hosts=["10.10.10.10"],
         remote_users=["root"], remote_passwords=["remote_pass"], timeout="-1", localhost_pass="local_password",
         tail_lines=1000, target_mail="target_mail@example.com", mail_user="source_mail@example.com",
-        mail_password="local_pass", test_name='TestCaseExample')
+        mail_password="local_pass", test_name='TestCaseExample', env_state_uri="engine_fqdn.com",
+        env_state_pass="engine_password")
+
     manager_obj._rhv_manager()
 
 run_rhv_manager()
