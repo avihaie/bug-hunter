@@ -160,6 +160,8 @@ class Manager:
             tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path= full_path
         )
         logger.info("Logs dumped to localhost path: %s", full_path)
+        logger.info("Moving short logs to dedicated folder")
+        helpers.create_localhost_short_logs_dir(full_path, self.tail_lines)
         logger.info("Notify of the issue via mail and console")
         notify_via_mail_and_console(
             event=self.fault_regex, event_details=found_regex, target_mail=self.target_mail, mail_user=self.mail_user,

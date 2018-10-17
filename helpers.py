@@ -65,6 +65,18 @@ def create_localhost_logs_dir(local_host_logs_path):
         print "Issue %s occured while creating/chmod dir %s" % (e, full_path)
     return full_path
 
+def create_localhost_short_logs_dir(local_host_logs_path, lines):
+    """
+    Create dir for short logs only and move short logs to the new location at localhsot
+    """
+    short_logs_full_path = local_host_logs_path + config.SHORT_LOGS_DIR
+    config.SLAVE_HOST.fs.chmod(short_logs_full_path, config.FULL_PERMISSIONS)
+    config.SLAVE_HOST.fs.mkdir(short_logs_full_path)
+    file_list = config.SLAVE_HOST.fs.listdir(local_host_logs_path)
+    short_logs_names = [file.encode('utf-8') for file in file_list if file.endswith(".log" + str(lines))]
+    for short_log_name in short_logs_names:
+        config.SLAVE_HOST.fs.move(local_host_logs_path + "/" + short_log_name, short_logs_full_path + "/" + short_log_name)
+
 
 def chmod_files_directories(dir_path):
     """

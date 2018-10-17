@@ -57,8 +57,12 @@ def get_resources_stats(engine_uri, engine_pass, results_path):
             resource_dict = json.loads(response.content)
             resource_stats = envs_ob.parse_response(resource_dict=resource_dict)
 
-        except Exception as e:
-            logger.error("Something bad occurred when queering the engine with: %s\n%s" % (url_for_resource, e))
+        except requests.exceptions.HTTPError as e:
+            raise requests.exceptions.HTTPError(
+                "Something bad occurred when queering the engine with: %s\n%s\nresponse is: %s" % (
+                    url_for_resource, e, response
+                )
+            )
 
         with open(envs_ob.results_path, 'a') as f:
             f.write(tabulate([[i.items()[0][0], i.items()[0][1]] for i in resource_stats],
