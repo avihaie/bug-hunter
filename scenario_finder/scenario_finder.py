@@ -1,6 +1,11 @@
-import logging, os, datetime, sys, argparse
-from traceback import print_stack
+import argparse
+import datetime
+import logging
+import os
+import sys
 from datetime import datetime, timedelta
+from traceback import print_stack
+
 import config
 
 EXTRACTED_FOLDER_NAME = 'extracted_gz'
@@ -8,7 +13,7 @@ DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 MINUTES_INTERVAL = 5
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - ''%(message)s',
     datefmt=DATETIME_FORMAT)
 logger = logging.getLogger(__name__)
@@ -108,8 +113,8 @@ class ScenarioFinder:
             # example: '2018-07-25 03:11:35' <= '2018-07-25 03:15:35' <= '2018-07-25 03:16:35'
             if datetime_object_start_time <= datetime_object_in_line <= \
                     datetime_object_start_time + timedelta(minutes=MINUTES_INTERVAL):
-                logger.info("Found start time string: %s in file: %s Beginning to search for event string: %s"
-                            % (self.time_start, os.path.basename(full_file_name), self.event_string_to_find))
+                logger.info("Found start time string within defined range of %s minutes: %s in file: %s Beginning to search for event string: %s"
+                            % (MINUTES_INTERVAL, datetime_str_in_line, os.path.basename(full_file_name), self.event_string_to_find))
                 return True
             return False
 
@@ -176,7 +181,7 @@ def main():
                                             Where date time format is '%Y-%m-%d %H:%M:%S'.
 
     """
-    datetime_now = datetime.datetime.now().strftime(DATETIME_FORMAT)
+    datetime_now = datetime.now().strftime(DATETIME_FORMAT)
 
     parser = argparse.ArgumentParser(description='This functionality parses engine events')
     parser.add_argument("-t", "--time_start", action="store", dest="time_start",
@@ -203,7 +208,7 @@ def main():
     args = parser.parse_args()
     # check start_time format
     try:
-        datetime.datetime.strptime(args.time_start, DATETIME_FORMAT)
+        datetime.strptime(args.time_start, DATETIME_FORMAT)
     except:
         parser.error("Argument -t must be in the following format: " + DATETIME_FORMAT)
 

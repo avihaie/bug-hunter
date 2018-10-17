@@ -1,11 +1,13 @@
 import argparse
+import datetime
 import json
 import logging
-import urllib3
-import datetime
+
 import requests
-import config
+import urllib3
 from tabulate import tabulate
+
+import config
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
