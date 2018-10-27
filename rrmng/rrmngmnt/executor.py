@@ -2,7 +2,7 @@
 This module was created for easier testing of whole package.
 """
 import contextlib
-from rrmngmnt.resource import Resource
+from rrmng.rrmngmnt.resource import Resource
 
 
 class Executor(Resource):

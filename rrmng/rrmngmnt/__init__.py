@@ -1,12 +1,12 @@
-from rrmngmnt.host import Host
-from rrmngmnt.user import (
+from rrmng.rrmngmnt.host import Host
+from rrmng.rrmngmnt.user import (
     User,
     RootUser,
     Domain,
     InternalDomain,
     ADUser,
 )
-from rrmngmnt.db import Database
+from rrmng.rrmngmnt.db import Database
 
 
 __all__ = [

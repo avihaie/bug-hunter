@@ -1,4 +1,4 @@
-from rrmngmnt.service import Service
+from rrmng.rrmngmnt.service import Service
 
 
 class Database(Service):

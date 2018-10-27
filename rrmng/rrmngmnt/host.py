@@ -10,17 +10,17 @@ import threading
 import warnings
 
 import netaddr
-from rrmngmnt import errors
-from rrmngmnt import power_manager
-from rrmngmnt import ssh
-from rrmngmnt.common import fqdn2ip
-from rrmngmnt.filesystem import FileSystem
-from rrmngmnt.network import Network
-from rrmngmnt.operatingsystem import OperatingSystem
-from rrmngmnt.package_manager import PackageManagerProxy
-from rrmngmnt.resource import Resource
-from rrmngmnt.service import Systemd, SysVinit, InitCtl
-from rrmngmnt.storage import NFSService, LVMService
+from rrmng.rrmngmnt import errors
+from rrmng.rrmngmnt import power_manager
+from rrmng.rrmngmnt import ssh
+from rrmng.rrmngmnt.common import fqdn2ip
+from rrmng.rrmngmnt.filesystem import FileSystem
+from rrmng.rrmngmnt.network import Network
+from rrmng.rrmngmnt.operatingsystem import OperatingSystem
+from rrmng.rrmngmnt.package_manager import PackageManagerProxy
+from rrmng.rrmngmnt.resource import Resource
+from rrmng.rrmngmnt.service import Systemd, SysVinit, InitCtl
+from rrmng.rrmngmnt.storage import NFSService, LVMService
 
 
 class Host(Resource):
@@ -326,7 +326,7 @@ class Host(Resource):
         Get SSH public key
 
         Args:
-            user (instance of rrmngmnt.User): What user to get ssh keys for,
+            user (instance of rrmng.rrmngmnt.User): What user to get ssh keys for,
                 default is root
 
         Returns:
@@ -360,7 +360,7 @@ class Host(Resource):
 
         Args:
             remote_host (Host): Remote host resource object
-            user (instance of rrmngmnt.User): What user to remove ssh keys for,
+            user (instance of rrmng.rrmngmnt.User): What user to remove ssh keys for,
                 default is root
 
         Returns:
@@ -385,7 +385,7 @@ class Host(Resource):
         Remove remote ssh key from AUTHORIZED_KEYS file
 
         Args:
-            user (instance of rrmngmnt.User): What user to remove from
+            user (instance of rrmng.rrmngmnt.User): What user to remove from
                 authorized_keys, default is root
 
         Returns:

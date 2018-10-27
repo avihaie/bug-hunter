@@ -2,8 +2,8 @@
 This module provides interface to obtain operating system information.
 """
 from collections import namedtuple
-from rrmngmnt.service import Service
-from rrmngmnt import errors
+from rrmng.rrmngmnt.service import Service
+from rrmng.rrmngmnt import errors
 
 
 class OperatingSystem(Service):

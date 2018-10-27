@@ -1,6 +1,6 @@
 import logging
 import shlex
-from rrmngmnt.service import Service
+from rrmng.rrmngmnt.service import Service
 
 logger = logging.getLogger(__name__)
 

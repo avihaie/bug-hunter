@@ -4,7 +4,7 @@ import socket
 import paramiko
 import contextlib
 import subprocess
-from rrmngmnt.executor import Executor
+from rrmng.rrmngmnt.executor import Executor
 
 AUTHORIZED_KEYS = os.path.join("%s", ".ssh/authorized_keys")
 KNOWN_HOSTS = os.path.join("%s", ".ssh/known_hosts")

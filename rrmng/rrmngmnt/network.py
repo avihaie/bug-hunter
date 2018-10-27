@@ -6,7 +6,7 @@ import shlex
 import six
 import subprocess
 
-from rrmngmnt.service import Service
+from rrmng.rrmngmnt.service import Service
 
 logger = logging.getLogger(__name__)
 

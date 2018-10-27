@@ -1,4 +1,4 @@
-from rrmngmnt.resource import Resource
+from rrmng.rrmngmnt.resource import Resource
 import re
 
 

@@ -1,11 +1,13 @@
 import logging
 import argparse
-
 import os
 
-from rrmngmnt.host import Host
-from rrmngmnt.user import RootUser
+from rrmng.rrmngmnt.host import Host
+from rrmng.rrmngmnt.user import RootUser
 import helpers
+import global_helpers
+import config
+
 
 LOCAL_HOST = Host("127.0.0.1")
 
@@ -63,21 +65,72 @@ class LogDumper:
         LOCAL_HOST.users.append(RootUser(self.localhost_pass))
         # Copy log to the localhost directory
 
-        for idx, log in enumerate(remote_logs_path):
+        for log in remote_logs_path:
             assert remote_host.fs.transfer(
                 path_src=log,
                 target_host=LOCAL_HOST,
                 path_dst=full_path
             )
 
+    def hosts_components_version(self, executor):
+        """
+        Find the selected components versions on all hosts
+
+        :returns component,version tuple
+        """
+        search_components = []
+        versions = []
+        found_components = []
+
+        # Get rid of duplicated logs
+        logs = set(self.logs)
+
+        # Find all software components from the logs
+        for log in logs:
+            search_components.append(log.split("/")[3])
+
+        # Check per each host all components versions and add it to the hosts_components_versions_dict
+        for component in search_components:
+            cmd = "rpm -qa | grep ^%s-[0-9]" % component
+
+            logger.info("running command %s", cmd)
+            rc, out, err = executor.run_cmd(cmd.split())
+            if rc:
+                logger.error("command %s failed\noutput=%s\n,err=%s\n" % (cmd, out, err))
+                logger.error("Component '%s' was not found on remote host", component)
+
+
+            else:
+                logger.info("component %s version is %s", component, out)
+                versions.append(out.rstrip("\n\r"))
+                found_components.append(component)
+
+        from ipdb import set_trace;set_trace()
+        return zip(found_components, versions)
+
+
 
 def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost_pass, full_path):
+    """
 
+    :param hosts_ips:
+    :param passwords:
+    :param usernames:
+    :param logs:
+    :param tail_lines:
+    :param localhost_pass:
+    :param full_path:
+
+    :return: Tuple of collected versions of components per host as key
+    """
+
+    components_version_full_list = []
     remote_hosts_logs_dict = {}
     host_executors = []
+
     logd_obj = LogDumper(
         hosts_ips=hosts_ips, passwords=passwords, usernames=usernames,
-        logs=logs, tail_lines=tail_lines, localhost_pass=localhost_pass
+        logs=[log[0] for log in logs], tail_lines=tail_lines, localhost_pass=localhost_pass
     )
     # Get host executors per host
     for host_ip, password, username, logs in zip(
@@ -86,7 +139,7 @@ def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost
         remote_hosts_logs_dict[host_ip] = {
             'password': password,
             'username': username,
-            'logs': [logs],
+            'logs': logs,
             'tail_lines': logd_obj.tail_lines,
         }
         logger.info("Host logs dict looks like %s", remote_hosts_logs_dict)
@@ -95,14 +148,27 @@ def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost
         )
         logger.info("Dumping logs %s on host ip %s", remote_hosts_logs_dict[host_ip]['logs'], host_ip)
         cut_logs_path = logd_obj.dump_host_logs(
-            host_executors[-1], remote_hosts_logs_dict[host_ip]['logs'], remote_hosts_logs_dict[host_ip]['tail_lines']
+            host_executors[-1], [remote_hosts_logs_dict[host_ip]['logs']], remote_hosts_logs_dict[host_ip]['tail_lines']
         )
-        cut_logs_path.extend(remote_hosts_logs_dict[host_ip]['logs'])
+        cut_logs_path.extend([remote_hosts_logs_dict[host_ip]['logs']])
+
         # Copy dumped logs back to localhost
         logger.info("Collect logs %s back to localhost", cut_logs_path)
         remote_host = Host(host_ip)
         remote_host.users.append(RootUser(password))
+
+        # Collect logs back to localhost
         logd_obj.collect_logs(remote_host=remote_host, remote_logs_path=cut_logs_path, full_path=full_path)
+
+        # Collect components versions
+        logger.info("Collect host %s components versions", host_ip)
+        components_version_tuple = logd_obj.hosts_components_version(executor=host_executors[-1])
+        components_version_full_list.append(components_version_tuple)
+
+    return components_version_full_list
+
+
+
 
 
 def main():
@@ -158,6 +224,16 @@ def main():
                              "the localhost password",
                         )
 
+    parser.add_argument("-f", "--localhostfullpath", action="store", type=str,
+                        dest = "localhost_logs_full_path",
+                        help = "logs directory path on the localhost , '-f' followed by "
+                               "full path of logs directory , i.e default is: '~/tmp/bug_hunter_logs'",
+                        default=global_helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH),
+                        )
+
+
+
+
     options = parser.parse_args()
     if options.machines:
         machines = options.machines
@@ -167,18 +243,21 @@ def main():
         logs = [machine[3:] for machine in machines]
         tail_lines = options.line_numbers
         localhost_pass = options.localhost_pass
+        full_path = options.localhost_logs_full_path
     else:
         raise RuntimeError("Missing arguments! usage : %s", parser.parse_args(['-h']))
 
     logger.info("start dumping logs...")
-    dump_hosts_logs(
+    config.LOCAL_ROOT_PASSWORD = localhost_pass
+    hosts_components_version = dump_hosts_logs(
         hosts_ips=hosts_ips, passwords=passwords, usernames=usernames, logs=logs,
-        tail_lines=tail_lines, localhost_pass=localhost_pass
+        tail_lines=tail_lines, localhost_pass=localhost_pass, full_path=full_path
     )
     logger.info(
         "Done !!!\n%s last lines and full version logs %s copied from hosts_ips %s to localhost",
         tail_lines, logs, hosts_ips
     )
+    logger.info("hosts_components_version are: %s", hosts_components_version)
 
 
 if __name__ == '__main__':

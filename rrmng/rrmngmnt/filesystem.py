@@ -3,9 +3,9 @@ import os
 import six
 import warnings
 
-from rrmngmnt import errors
-from rrmngmnt.service import Service
-from rrmngmnt.resource import Resource
+from rrmng.rrmngmnt import errors
+from rrmng.rrmngmnt.service import Service
+from rrmng.rrmngmnt.resource import Resource
 
 
 class FileSystem(Service):

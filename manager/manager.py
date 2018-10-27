@@ -3,7 +3,7 @@ import time
 import datetime
 
 import config
-import helpers
+import global_helpers
 from listener.log_listener import watch_logs
 from log_dumper.log_dumper import dump_hosts_logs
 from notifier.notifier import notify_via_mail_and_console
@@ -134,7 +134,7 @@ class Manager:
         test_start_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         logger.info("Starting test monitoring at %s", test_start_time)
 
-        full_path = helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
+        full_path = global_helpers.create_localhost_logs_dir(config.LOCALHOST_LOGS_PATH)
         logger.info("Local host logs directory set to the following path: %s", full_path + "/" + "env_state_start")
 
         logger.info("Check the enviroment state at the start of the test")
@@ -161,14 +161,14 @@ class Manager:
         )
         logger.info("Logs dumped to localhost path: %s", full_path)
         logger.info("Moving short logs to dedicated folder")
-        helpers.create_localhost_short_logs_dir(full_path, self.tail_lines)
+        global_helpers.create_localhost_short_logs_dir(full_path, self.tail_lines)
         logger.info("Notify of the issue via mail and console")
         notify_via_mail_and_console(
             event=self.fault_regex, event_details=found_regex, target_mail=self.target_mail, mail_user=self.mail_user,
             mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name, log_path=full_path
         )
         logger.info("Parsing scenario from the log file")
-        helpers.chmod_files_directories(full_path)
+        global_helpers.chmod_files_directories(full_path)
         scenario_finder_obj = ScenarioFinder(
             time_start=self.test_start_time, path_logs=full_path, event_string="EVENT_ID",
             scenario_result_file_path=full_path + "/" + "events")

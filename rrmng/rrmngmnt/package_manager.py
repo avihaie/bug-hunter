@@ -1,5 +1,5 @@
-from rrmngmnt import errors
-from rrmngmnt.service import Service
+from rrmng.rrmngmnt import errors
+from rrmng.rrmngmnt.service import Service
 
 PIPE_GREP_COMMAND_D = ('|', 'grep', '-E')
 PIPE_XARGS_COMMAND_D = ('|', 'xargs')

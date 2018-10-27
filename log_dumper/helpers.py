@@ -1,6 +1,6 @@
 import config
-from rrmngmnt.host import Host
-from rrmngmnt.user import User
+from rrmng.rrmngmnt.host import Host
+from rrmng.rrmngmnt.user import User
 
 
 def get_host_resource(ip, password, username=None):

@@ -3,7 +3,7 @@ Manage host power via ssh or ipmitool
 """
 import socket
 import subprocess
-from rrmngmnt.service import Service
+from rrmng.rrmngmnt.service import Service
 
 SSH_TYPE = "ssh"
 IPMI_TYPE = "ipmi"
