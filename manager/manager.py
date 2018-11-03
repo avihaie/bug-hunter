@@ -9,7 +9,7 @@ from log_dumper.log_dumper import dump_hosts_logs
 from notifier.notifier import notify_via_mail_and_console
 from scenario_finder.scenario_finder import ScenarioFinder
 from env_state.env_state import get_resources_stats
-
+from bugzilla_report_maker.bugzilla_report_maker import bugzilla_report_maker
 
 # set up logging to file
 logging.basicConfig(
@@ -42,6 +42,8 @@ class Manager:
         env_state_pass=None
     ):
         self.fault_regex = fault_regex
+        # Logs are a list of lists , each list represent logs we require in each host.
+        # f.e :[['/var/log/vdsm/vdsm.log'], ['/var/log/ovirt-engine/engine.log']]
         self.logs = logs
         self.remote_hosts = remote_hosts
         self.remote_users = remote_users
@@ -141,9 +143,9 @@ class Manager:
         get_resources_stats(engine_uri=self.env_state_uri, engine_pass=self.env_state_pass,
                             results_path=full_path + "/" + "env_state_start")
 
-        logger.info("Starting log listener searching for regex %s in logs %s", self.fault_regex, self.logs)
+        logger.info("Starting log listener searching for regex %s in logs %s", self.fault_regex, self.logs[0][0])
         found_regex, issue_found = watch_logs(
-            files_to_watch=self.logs[0],
+            files_to_watch=self.logs[0][0],
             regex=self.fault_regex,
             ip_for_files=self.remote_hosts[0],
             username=self.remote_users[0],
@@ -153,9 +155,9 @@ class Manager:
 
         # TODO: implemet multithreading for 3 threads log_dumper(run serially event_finder,mapper) , notifier , check_env_state
         # TODO: Once all threads are all done run bugzilla reporter
-        logger.info("Issue found: %s\n Starting to dump logs to localhost ", issue_found)
+        logger.info("Issue found: %s\n Starting to dump logs to localhost ", found_regex)
 
-        dump_hosts_logs(
+        components_version_full_list = dump_hosts_logs(
             hosts_ips=self.remote_hosts, passwords=self.remote_passwords, usernames=self.remote_users, logs=self.logs,
             tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path= full_path
         )
@@ -168,10 +170,11 @@ class Manager:
             mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name, log_path=full_path
         )
         logger.info("Parsing scenario from the log file")
+        event_file_path = full_path + "/" + "events"
         global_helpers.chmod_files_directories(full_path)
         scenario_finder_obj = ScenarioFinder(
             time_start=self.test_start_time, path_logs=full_path, event_string="EVENT_ID",
-            scenario_result_file_path=full_path + "/" + "events")
+            scenario_result_file_path=event_file_path)
         scenario_finder_obj.parse_logs()
 
         logger.info("Check the environment state when the issue occurred ")
@@ -179,6 +182,13 @@ class Manager:
             engine_uri=self.env_state_uri, engine_pass=self.env_state_pass,
             results_path=full_path + "/" + "env_state_at_issue"
         )
+
+        logger.info("Creating bugzilla report in file %s")
+        bugzilla_report_maker_ob = bugzilla_report_maker(
+            logs_path=full_path, issue_found=found_regex, test_name=self.test_name,
+            components_versions=components_version_full_list, events_file_path=event_file_path
+        )
+        bugzilla_report_maker_ob.create_bugzilla_file()
 
 
 

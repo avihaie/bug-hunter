@@ -70,8 +70,8 @@ def create_localhost_short_logs_dir(local_host_logs_path, lines):
     Create dir for short logs only and move short logs to the new location at localhsot
     """
     short_logs_full_path = local_host_logs_path + config.SHORT_LOGS_DIR
-    config.SLAVE_HOST.fs.chmod(short_logs_full_path, config.FULL_PERMISSIONS)
     config.SLAVE_HOST.fs.mkdir(short_logs_full_path)
+    config.SLAVE_HOST.fs.chmod(short_logs_full_path, config.FULL_PERMISSIONS)
     file_list = config.SLAVE_HOST.fs.listdir(local_host_logs_path)
     short_logs_names = [file.encode('utf-8') for file in file_list if file.endswith(".log" + str(lines))]
     for short_log_name in short_logs_names:

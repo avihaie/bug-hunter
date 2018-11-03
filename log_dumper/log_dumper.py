@@ -105,7 +105,6 @@ class LogDumper:
                 versions.append(out.rstrip("\n\r"))
                 found_components.append(component)
 
-        from ipdb import set_trace;set_trace()
         return zip(found_components, versions)
 
 

@@ -4,8 +4,8 @@ import subprocess
 import logging
 import os
 import time
-from rrmngmnt.host import Host as HostResource
-from rrmngmnt.user import User
+from rrmng.rrmngmnt.host import Host as HostResource
+from rrmng.rrmngmnt.user import User
 import argparse
 
 DEFAULT_TIMEOUT = 240
