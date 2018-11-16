@@ -1,6 +1,7 @@
 import logging
 import time
 import datetime
+from threading import Thread
 
 import config
 import global_helpers
@@ -14,7 +15,7 @@ from bugzilla_report_maker.bugzilla_report_maker import bugzilla_report_maker
 # set up logging to file
 logging.basicConfig(
     level=logging.INFO,
-    format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - '
+    format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(threadName)s '
            '%(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -152,9 +153,6 @@ class Manager:
             password=self.remote_passwords[0],
             time_out=-1,
             )
-
-        # TODO: implemet multithreading for 3 threads log_dumper(run serially event_finder,mapper) , notifier , check_env_state
-        # TODO: Once all threads are all done run bugzilla reporter
         logger.info("Issue found: %s\n Starting to dump logs to localhost ", found_regex)
 
         components_version_full_list = dump_hosts_logs(
@@ -165,10 +163,22 @@ class Manager:
         logger.info("Moving short logs to dedicated folder")
         global_helpers.create_localhost_short_logs_dir(full_path, self.tail_lines)
         logger.info("Notify of the issue via mail and console")
-        notify_via_mail_and_console(
-            event=self.fault_regex, event_details=found_regex, target_mail=self.target_mail, mail_user=self.mail_user,
-            mail_pass=self.mail_password, host_name=self.remote_hosts[0], test_name=self.test_name, log_path=full_path
+
+        t1 = Thread(target=notify_via_mail_and_console, args=(
+                self.fault_regex, found_regex, self.target_mail,self.mail_user, self.mail_password,
+                self.remote_hosts[0], self.test_name, full_path
+        ))
+        t2 = Thread(target=get_resources_stats, args=(
+            self.env_state_uri, self.env_state_pass, full_path + "/" + "env_state_at_issue")
         )
+
+        logger.info("Starting 2 threads concurrently with the scenario finder as follows:")
+        logger.info("Notify of the issue via mail and console done on thread name %s", t1.getName())
+        logger.info("Check the environment state when the issue occurred done on thread named %s", t2.getName())
+
+        t1.start()
+        t2.start()
+
         logger.info("Parsing scenario from the log file")
         event_file_path = full_path + "/" + "events"
         global_helpers.chmod_files_directories(full_path)
@@ -177,12 +187,10 @@ class Manager:
             scenario_result_file_path=event_file_path)
         scenario_finder_obj.parse_logs()
 
-        logger.info("Check the environment state when the issue occurred ")
-        get_resources_stats(
-            engine_uri=self.env_state_uri, engine_pass=self.env_state_pass,
-            results_path=full_path + "/" + "env_state_at_issue"
-        )
+        t1.join()
+        t2.join()
 
+        logger.info("All threads are done, now we can start creating bugzilla report")
         logger.info("Creating bugzilla report in file %s")
         bugzilla_report_maker_ob = bugzilla_report_maker(
             logs_path=full_path, issue_found=found_regex, test_name=self.test_name,
@@ -194,7 +202,7 @@ class Manager:
 
 def run_rhv_manager():
     manager_obj = Manager(
-        fault_regex="Expression to catch", logs=["/log/full/path"], remote_hosts=["10.10.10.10"],
+        fault_regex="Expression to catch", logs=[["/log/full/path"]], remote_hosts=["10.10.10.10"],
         remote_users=["root"], remote_passwords=["remote_pass"], timeout="-1", localhost_pass="local_password",
         tail_lines=1000, target_mail="target_mail@example.com", mail_user="source_mail@example.com",
         mail_password="local_pass", test_name='TestCaseExample', env_state_uri="engine_fqdn.com",
