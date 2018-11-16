@@ -2,6 +2,7 @@ import logging
 import time
 import datetime
 from threading import Thread
+import yaml
 
 import config
 import global_helpers
@@ -199,17 +200,19 @@ class Manager:
         bugzilla_report_maker_ob.create_bugzilla_file()
 
 
-
-def run_rhv_manager():
+def run_rhv_manager(yaml_path):
+    conf = yaml.load(open(yaml_path))
     manager_obj = Manager(
-        fault_regex="Expression to catch", logs=[["/log/full/path"]], remote_hosts=["10.10.10.10"],
-        remote_users=["root"], remote_passwords=["remote_pass"], timeout="-1", localhost_pass="local_password",
-        tail_lines=1000, target_mail="target_mail@example.com", mail_user="source_mail@example.com",
-        mail_password="local_pass", test_name='TestCaseExample', env_state_uri="engine_fqdn.com",
-        env_state_pass="engine_password")
+        fault_regex=conf['fault_regex'], logs=[conf['logs']], remote_hosts=conf['remote_hosts'],
+        remote_users=conf['remote_users'], remote_passwords=conf['remote_passwords'], timeout=conf['timeout'],
+        localhost_pass=conf['localhost_pass'], tail_lines=conf['tail_lines'], target_mail=conf['target_mail'],
+        mail_user=conf['mail_user'], mail_password=conf['mail_password'], test_name=conf['test_name'],
+        env_state_uri=conf['env_state_uri'], env_state_pass=conf['env_state_pass']
+    )
 
     manager_obj._rhv_manager()
 
-run_rhv_manager()
+
+run_rhv_manager('/full/path/runner.yaml')
 
 
