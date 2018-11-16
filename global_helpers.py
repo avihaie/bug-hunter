@@ -1,6 +1,7 @@
 import datetime
 import os
 import getpass
+import yaml
 
 import config
 from rrmng.rrmngmnt.host import Host
@@ -85,3 +86,4 @@ def chmod_files_directories(dir_path):
     for root, dirs, files in os.walk(dir_path):
         for f in files:
             config.SLAVE_HOST.fs.chmod(os.path.join(root, f), config.FULL_PERMISSIONS)
+

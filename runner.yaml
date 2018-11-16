@@ -1,0 +1,23 @@
+---
+# Bug hunter inputs for rhv runner
+
+fault_regex: localhost
+logs:
+  - /log/full/path
+remote_hosts:
+  - 10.10.10.10
+remote_users:
+  - root
+remote_passwords:
+  - remote_pass
+timeout: -1
+localhost_pass: local_password
+tail_lines: 1000
+target_mail: target_mail@example.com
+mail_user: source_mail@example.com
+mail_password: mail_pass
+test_name: TestCaseExample
+env_state_uri: engine_fqdn.com
+env_state_pass: engine_password
+...
+
