@@ -135,6 +135,7 @@ class Manager:
 
 
     def _rhv_manager(self):
+        config.SLAVE_HOST.users.insert(0, config.RootUser(self.localhost_pass))
         test_start_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         logger.info("Starting test monitoring at %s", test_start_time)
 
