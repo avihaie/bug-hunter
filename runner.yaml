@@ -1,23 +1,38 @@
 ---
 # Bug hunter inputs for rhv runner
 
+# The regex you want to hunt for, for example: Exception or ERROR 
 fault_regex: localhost
+# Which logs do you want to monitor on remote hosts , for example: /var/log/log_name.log
 logs:
   - /log/full/path
+# Remote hosts you want to monitor the logs on , can be IP or FQDN
 remote_hosts:
   - 10.10.10.10
+# SSH user name on the remote host
 remote_users:
   - root
+# SSH password on the remote host
 remote_passwords:
   - remote_pass
+# timeout is how much time in seconds you want to monitor the log, -1 which is default means monitor forever 
 timeout: -1
+# The root password of the localhost machine (were you are running this script from) 
 localhost_pass: local_password
+# As bug hunter also prepare a shorted version of the logs you can cut X last lines of the monitored log 
 tail_lines: 1000
+# The email address target that a mail will be sent to once an issue/fault is catched
 target_mail: target_mail@example.com
+# This is the a source email address used as the sender, the default is bughunter274@gmail.com
 mail_user: source_mail@example.com
+# This is the source mail password
 mail_password: mail_pass
+# This is the test name which is running
 test_name: TestCaseExample
+# This is the the host URI from which we can take the enviroment state data from
+# For example: <host.name>.<some domain name> like fqdn but without the https:\\
 env_state_uri: engine_fqdn.com
+# This is the the host(from which we can take the enviroment state data from) password for the root user 
 env_state_pass: engine_password
 ...
 
