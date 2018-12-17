@@ -153,7 +153,7 @@ class Manager:
             ip_for_files=self.remote_hosts[0],
             username=self.remote_users[0],
             password=self.remote_passwords[0],
-            time_out=-1,
+            time_out=self.timeout,
             )
         logger.info("Issue found: %s\n Starting to dump logs to localhost ", found_regex)
 
