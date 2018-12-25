@@ -108,7 +108,6 @@ class LogDumper:
         return zip(found_components, versions)
 
 
-
 def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost_pass, full_path):
     """
 
@@ -129,7 +128,7 @@ def dump_hosts_logs(hosts_ips, passwords, usernames, logs, tail_lines, localhost
 
     logd_obj = LogDumper(
         hosts_ips=hosts_ips, passwords=passwords, usernames=usernames,
-        logs=[log[0] for log in logs], tail_lines=tail_lines, localhost_pass=localhost_pass
+        logs=logs[0], tail_lines=tail_lines, localhost_pass=localhost_pass
     )
     # Get host executors per host
     for host_ip, password, username, logs in zip(

@@ -133,7 +133,6 @@ class Manager:
     def test_start_time(self, test_start_time_val):
         self.__test_start_time = test_start_time_val
 
-
     def _rhv_manager(self):
         config.SLAVE_HOST.users.insert(0, config.RootUser(self.localhost_pass))
         test_start_time = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -156,10 +155,9 @@ class Manager:
             time_out=self.timeout,
             )
         logger.info("Issue found: %s\n Starting to dump logs to localhost ", found_regex)
-
         components_version_full_list = dump_hosts_logs(
             hosts_ips=self.remote_hosts, passwords=self.remote_passwords, usernames=self.remote_users, logs=self.logs,
-            tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path= full_path
+            tail_lines=self.tail_lines, localhost_pass=self.localhost_pass, full_path=full_path
         )
         logger.info("Logs dumped to localhost path: %s", full_path)
         logger.info("Moving short logs to dedicated folder")
