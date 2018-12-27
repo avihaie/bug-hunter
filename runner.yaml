@@ -29,10 +29,10 @@ mail_user: source_mail@example.com
 mail_password: mail_pass
 # This is the test name which is running
 test_name: TestCaseExample
-# This is the the host URI from which we can take the enviroment state data from
+# This is the the host URI from which we can take the environment state data from
 # For example: <host.name>.<some domain name> like fqdn but without the https:\\
 env_state_uri: engine_fqdn.com
-# This is the the host(from which we can take the enviroment state data from) password for the root user 
+# This is the the host(from which we can take the environment state data from) password for the API auth
 env_state_pass: engine_password
 ...
 

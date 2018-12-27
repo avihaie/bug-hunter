@@ -164,3 +164,9 @@ fabric.properties
 
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
+env_state/report_2018-09-22_14:45:06.txt
+env_state/report_2018-09-22_14:45:17.txt
+env_state/report_2018-09-22_14:54:26.txt
+env_state/report_2018-09-22_14:55:09.txt
+env_state/report_2018-09-22_14:57:18.txt
+requirements.txt
